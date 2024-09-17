@@ -1,0 +1,126 @@
+use bevy::{core_pipeline::tonemapping::Tonemapping, prelude::*};
+
+pub mod controller;
+pub mod inputs;
+pub mod look_angles;
+pub mod look_transform;
+pub mod projection;
+
+use bevy_input::InputSystem;
+// re-exports
+pub use controller::{CameraController, CameraControllerSettings};
+pub use look_transform::LookTransform;
+use look_transform::{LookTransformBundle, Smoother};
+
+/// Basic orbital camera plugin
+///
+/// Use [CameraController::enabled](controller::CameraController::enabled) to enable or disable camera controls
+#[derive(Clone, Copy, Default)]
+pub struct MapCameraPlugin;
+
+impl Plugin for MapCameraPlugin {
+    fn build(&self, app: &mut App) {
+        app.configure_sets(
+            Update,
+            (
+                CameraChange::Before,
+                CameraChange::Applying,
+                CameraChange::After,
+            )
+                .chain()
+                .after(InputSystem),
+        );
+
+        app.add_systems(Update, look_transform_system.in_set(CameraChange::Applying));
+
+        app.init_state::<CameraPerspectiveState>();
+
+        // logic for camera input (buttons and inputdevices)
+        app.add_plugins((
+            controller::CameraControllerPlugin,
+            projection::ChangeProjectionPlugin,
+        ));
+    }
+}
+
+pub fn look_transform_system(
+    mut cameras: Query<(&LookTransform, &mut Transform, Option<&mut Smoother>)>,
+) {
+    for (look_transform, mut scene_transform, smoother) in cameras.iter_mut() {
+        match smoother {
+            Some(mut s) if s.enabled => {
+                *scene_transform = s.smooth_transform(look_transform).into();
+            }
+            _ => (),
+        };
+    }
+}
+
+#[derive(Bundle)]
+pub struct CameraBundle {
+    camera_3d: Camera3dBundle,
+    controller: CameraController,
+    look_transform: LookTransformBundle,
+}
+
+impl CameraBundle {
+    pub fn new_with_transform(look_transform: LookTransform) -> Self {
+        let transform = Transform::from_translation(look_transform.eye)
+            .looking_at(look_transform.target, Vec3::Y);
+
+        let mut bundle = Self::default();
+
+        bundle.camera_3d.transform = transform;
+        bundle.look_transform.transform = look_transform;
+
+        bundle
+    }
+}
+
+impl Default for CameraBundle {
+    fn default() -> Self {
+        let look_transform = LookTransform::new(Vec3::ONE * 5.0, Vec3::ZERO, Vec3::Y);
+
+        let transform = Transform::from_translation(look_transform.eye)
+            .looking_at(look_transform.target, Vec3::Y);
+
+        Self {
+            camera_3d: Camera3dBundle {
+                tonemapping: Tonemapping::None,
+                camera: Camera {
+                    msaa_writeback: false,
+                    ..Default::default()
+                },
+                transform,
+                ..Default::default()
+            },
+            controller: Default::default(),
+            look_transform: LookTransformBundle {
+                transform: look_transform,
+                smoother: Default::default(),
+            },
+        }
+    }
+}
+
+/// CameraChange is used to make sure that systems that should run after any camera change is actually
+/// run after them while keeping the plugins decoupled. For example, when the camera is moved using the
+/// [controller::CameraControllerPlugin] the focusmarker from the [focusmarker::FocusMarkerPlugin]
+/// must be updated after all camera changes.
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub enum CameraChange {
+    /// Systems that should run before any changes to the camera transform are made
+    Before,
+    /// Systems that should run while the camera transform are made
+    Applying,
+    /// Systems that should run after any changes to the camera transform are made
+    After,
+}
+
+/// To change projection [ChangeProjectionPlugin](projection::ChangeProjectionPlugin) must be enabled
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Default, States)]
+pub enum CameraPerspectiveState {
+    #[default]
+    Perspective,
+    Orthographic,
+}

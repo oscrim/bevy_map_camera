@@ -1,0 +1,29 @@
+[package]
+name = "bevy_map_cam"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["bevy/bevy_render", "bevy/bevy_core_pipeline", "bevy/bevy_state"]
+
+[dependencies]
+log = "0.4"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+bevy = { version = "0.14", default-features = false, features = [
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_state",
+] }
+bevy_input = { version = "0.14" }
+
+bevy_mod_raycast = "0.18.0"
+
+[dependencies.approx]
+version = "0.5"
+
+
+[dev-dependencies]
+bevy = { version = "0.14" }
