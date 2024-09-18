@@ -27,18 +27,11 @@ fn pan_rotate_orbit_camera(
     mut camera_writer: EventWriter<ControlEvent>,
     mut mouse_inputs: MouseKeyboardInputs,
 ) {
-    // change input mapping for orbit and panning here
-    //let controller = query.single();
-
-    // let mut pan = mouse_inputs.mouse_drag(&settings.buttons.pan);
     let mut rotation_move = mouse_inputs.mouse_drag(&settings.buttons.rotate);
 
     if let (Some(alt), true) = (&settings.buttons.rotate_alt, rotation_move.is_none()) {
         rotation_move = mouse_inputs.mouse_drag(alt);
     }
-    // if let (Some(alt), true) = (&settings.buttons.pan_alt, pan.is_none()) {
-    //     pan = mouse_inputs.mouse_drag(alt);
-    // }
 
     // only rotate in perspective state
     if let (Some(rotation_move), CameraPerspectiveState::Perspective) =
@@ -48,13 +41,6 @@ fn pan_rotate_orbit_camera(
             rotation_move * settings.mouse_rotation_sensitivity_modifier,
         ));
     }
-
-    // if let Some(pan) = pan {
-    //     camera_writer.send(ControlEvent::TranslateTarget(
-    //         pan * controller.scaled_pan_sensitivity
-    //             * settings.mouse_translation_sensitivity_modifier,
-    //     ));
-    // }
 }
 
 /// Handles the zooming of the orbital camera

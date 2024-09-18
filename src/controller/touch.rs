@@ -9,7 +9,7 @@ use super::{
     CameraControllerSettings, ControlEvent,
 };
 
-pub struct TouchInputPlugin;
+pub(super) struct TouchInputPlugin;
 
 impl Plugin for TouchInputPlugin {
     fn build(&self, app: &mut App) {

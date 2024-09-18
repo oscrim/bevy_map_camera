@@ -64,7 +64,7 @@ fn enter_orthographic(
     }
 }
 
-pub fn ortho_from_looktransform(transform: &mut LookTransform) -> Projection {
+fn ortho_from_looktransform(transform: &mut LookTransform) -> Projection {
     if let Some(dir) = transform.look_direction() {
         if dir != Vec3::Y {
             transform.eye = transform.target + transform.radius() * Vec3::Y;

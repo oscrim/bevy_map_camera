@@ -18,6 +18,8 @@ pub struct MapCameraPlugin;
 
 impl Plugin for MapCameraPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<LookTransform>();
+
         app.configure_sets(
             Update,
             (CameraChange::Before, CameraChange::After)
@@ -42,7 +44,7 @@ impl Plugin for MapCameraPlugin {
     }
 }
 
-pub fn look_transform_system(
+fn look_transform_system(
     mut cameras: Query<(&LookTransform, &mut Transform, Option<&mut Smoother>)>,
 ) {
     for (look_transform, mut scene_transform, smoother) in cameras.iter_mut() {

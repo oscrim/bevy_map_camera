@@ -5,7 +5,7 @@ use bevy::prelude::EventReader;
 use bevy::{ecs::system::SystemParam, prelude::Vec2};
 
 #[derive(SystemParam)]
-pub struct MouseKeyboardInputs<'w, 's> {
+pub(super) struct MouseKeyboardInputs<'w, 's> {
     inputs: Inputs<'w, 's>,
     ev_motion: EventReader<'w, 's, MouseMotion>,
     ev_scroll: EventReader<'w, 's, MouseWheel>,

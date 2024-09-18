@@ -6,15 +6,14 @@ mod touch_inputs;
 
 use std::f32::consts::PI;
 
-use crate::CameraPerspectiveState;
-
 use bevy::{prelude::*, window::WindowFocused};
 
-use crate::inputs::InputButton;
-use crate::CameraChange;
-pub use resources::CameraControllerButtons;
+use crate::{
+    inputs::InputButton, look_angles::LookAngles, CameraChange, CameraPerspectiveState,
+    LookTransform,
+};
 
-use crate::{look_angles::LookAngles, LookTransform};
+pub use resources::CameraControllerButtons;
 
 #[derive(Resource, Clone, Reflect)]
 #[reflect(Resource)]
@@ -82,7 +81,7 @@ impl Default for CameraController {
 }
 
 #[derive(Event)]
-pub enum ControlEvent {
+enum ControlEvent {
     Orbit(Vec2),
     /// Translation Delta
     TranslateTarget(Vec3),

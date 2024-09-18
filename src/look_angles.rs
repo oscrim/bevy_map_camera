@@ -1,11 +1,10 @@
 use approx::relative_eq;
-use bevy::{math::prelude::*, prelude::ReflectDefault, reflect::Reflect};
+use bevy::math::prelude::*;
 
 const PI: f32 = std::f32::consts::PI;
 
 /// A (yaw, pitch) pair representing a direction.
-#[derive(Debug, PartialEq, Clone, Copy, Default, Reflect)]
-#[reflect(Default, Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct LookAngles {
     // The fields are protected to keep them in an allowable range for the camera transform.
     yaw: f32,

@@ -20,7 +20,7 @@ impl Default for TouchInputSettings {
     }
 }
 
-pub struct Pinch {
+pub(super) struct Pinch {
     /// The delta of the distances between the current touches compared to last frame.
     pub distance_delta: f32,
     /// The screen location between the current touches
@@ -30,7 +30,7 @@ pub struct Pinch {
 /// Only one of [`Self::get_pinch`], [`Self::get_one_touch_drag`] and [`Self::get_two_touch_drag`]
 /// can be used in the same system, otherwise they will overwrite each-others last touches.
 #[derive(SystemParam)]
-pub struct TouchInputs<'w, 's> {
+pub(super) struct TouchInputs<'w, 's> {
     touch_settings: Res<'w, TouchInputSettings>,
     touches: Res<'w, Touches>,
     last_touch_1: Local<'s, Option<Vec2>>,

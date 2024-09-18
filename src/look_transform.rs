@@ -111,3 +111,15 @@ impl Smoother {
         self.lerp_tfm = None;
     }
 }
+
+#[cfg(feature = "bevy_easings")]
+impl bevy_easings::Lerp for LookTransform {
+    type Scalar = f32;
+    fn lerp(&self, other: &Self, scalar: &Self::Scalar) -> Self {
+        Self {
+            eye: self.eye.lerp(other.eye, *scalar),
+            target: self.target.lerp(other.target, *scalar),
+            up: self.up.lerp(other.up, *scalar),
+        }
+    }
+}

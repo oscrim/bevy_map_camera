@@ -8,7 +8,7 @@ use bevy::{
 };
 
 #[derive(SystemParam)]
-pub struct Inputs<'w, 's> {
+pub(crate) struct Inputs<'w, 's> {
     pub keys: Res<'w, ButtonInput<KeyCode>>,
     pub mouse: Res<'w, ButtonInput<MouseButton>>,
     #[system_param(ignore)]
@@ -16,14 +16,6 @@ pub struct Inputs<'w, 's> {
 }
 
 impl<'w, 's> Inputs<'w, 's> {
-    pub fn pressed<T: Into<InputButton>>(&self, input: T) -> bool {
-        let input = input.into();
-        match input {
-            InputButton::Mouse(mouse) => self.mouse.pressed(mouse),
-            InputButton::Key(key) => self.keys.pressed(key),
-        }
-    }
-
     /// Returns true if only the buttons in `input` are pressed.
     pub fn multi_pressed(&self, input: &Vec<InputButton>) -> bool {
         if input.is_empty() {
