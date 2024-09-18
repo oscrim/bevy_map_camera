@@ -1,6 +1,8 @@
 # `bevy_map_camera`
 
-A 3D camera controller with functionality similar to the Google Maps controls.
+A 3D camera controller inspired by Google Maps, [f4maps](https://demo.f4map.com/) and [Change Finder](https://chargefinder.com/nearby).
+
+Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth-bevy-cameras`](https://github.com/bonsairobo/smooth-bevy-cameras).
 
 ## Features
 
@@ -45,7 +47,3 @@ fn setup(
 ```
 
 Check out the [projection example](https://github.com/oscrim/bevy_map_camera/blob/main/examples/projection.rs) to see how to change between Perspective and Orthographic.
-
-## Mentions
-
-Based upon parts of [`smooth-bevy-cameras`](https://github.com/bonsairobo/smooth-bevy-cameras)

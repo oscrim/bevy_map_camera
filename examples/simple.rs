@@ -1,11 +1,12 @@
+use bevy::color::palettes::css::{DARK_GREEN, TAN};
+use bevy::core_pipeline::auto_exposure::AutoExposurePlugin;
 use bevy::prelude::*;
 
-use bevy_map_cam::{CameraBundle, CameraControllerSettings, LookTransform, MapCameraPlugin};
+use bevy_map_camera::{CameraControllerSettings, LookTransform, MapCameraBundle, MapCameraPlugin};
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins);
-    app.add_plugins(MapCameraPlugin::default());
+    app.add_plugins((DefaultPlugins, AutoExposurePlugin, MapCameraPlugin));
 
     app.add_systems(Startup, setup);
     app.run();
@@ -19,23 +20,28 @@ fn setup(
 ) {
     // plane
     commands.spawn(PbrBundle {
-        mesh: meshes.add(Plane3d::default().mesh().size(5., 5.)),
-        material: materials.add(Color::srgb(0.3, 0.5, 0.3)),
+        mesh: meshes.add(Plane3d::default().mesh().size(10., 10.)),
+        material: materials.add(Color::from(DARK_GREEN)),
         ..Default::default()
     });
 
-    // cube
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(Cuboid::from_size(Vec3::splat(1.0)))),
-        material: materials.add(Color::srgb(0.8, 0.7, 0.6)),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        ..Default::default()
-    });
+    let cube_material = materials.add(Color::from(TAN));
+
+    // cubes
+    for x in -2..=2 {
+        for z in -2..=2 {
+            commands.spawn(PbrBundle {
+                mesh: meshes.add(Cuboid::from_size(Vec3::splat(0.2))),
+                material: cube_material.clone(),
+                transform: Transform::from_xyz((x * 2) as f32, 0.1, (z * 2) as f32),
+                ..Default::default()
+            });
+        }
+    }
 
     // light
     commands.spawn(PointLightBundle {
         point_light: PointLight {
-            intensity: 1500.0,
             shadows_enabled: true,
             ..Default::default()
         },
@@ -44,18 +50,17 @@ fn setup(
     });
 
     // camera
-    commands.spawn(CameraBundle::new_with_transform(LookTransform::new(
+    commands.spawn(MapCameraBundle::new_with_transform(LookTransform::new(
         Vec3 {
             x: 1.,
-            y: 2.5,
-            z: 5.0,
+            y: 8.5,
+            z: 10.0,
         },
         Vec3::ZERO,
         Vec3::Y,
     )));
 
     // text
-
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -68,11 +73,7 @@ fn setup(
             parent.spawn((
                 TextBundle::from_section(
                     format!("Press {:?} to pan", settings.buttons.pan),
-                    TextStyle {
-                        font_size: 30.0,
-                        color: Color::BLACK,
-                        ..Default::default()
-                    },
+                    TextStyle::default(),
                 )
                 .with_style(Style {
                     margin: UiRect::all(Val::Px(5.0)),
@@ -84,15 +85,10 @@ fn setup(
             parent.spawn((
                 TextBundle::from_section(
                     format!("Press {:?} to rotate", settings.buttons.rotate),
-                    TextStyle {
-                        font_size: 30.0,
-                        color: Color::BLACK,
-                        ..Default::default()
-                    },
+                    TextStyle::default(),
                 )
                 .with_style(Style {
                     margin: UiRect::all(Val::Px(5.0)),
-                    align_self: AlignSelf::FlexStart,
                     ..default()
                 }),
                 Label,

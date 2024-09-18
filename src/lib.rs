@@ -1,4 +1,4 @@
-use bevy::{core_pipeline::tonemapping::Tonemapping, prelude::*};
+use bevy::prelude::*;
 
 pub mod controller;
 pub mod inputs;
@@ -12,26 +12,25 @@ pub use controller::{CameraController, CameraControllerSettings};
 pub use look_transform::LookTransform;
 use look_transform::{LookTransformBundle, Smoother};
 
-/// Basic orbital camera plugin
-///
-/// Use [CameraController::enabled](controller::CameraController::enabled) to enable or disable camera controls
-#[derive(Clone, Copy, Default)]
+/// Orbital camera plugin
+#[derive(Clone, Copy)]
 pub struct MapCameraPlugin;
 
 impl Plugin for MapCameraPlugin {
     fn build(&self, app: &mut App) {
         app.configure_sets(
             Update,
-            (
-                CameraChange::Before,
-                CameraChange::Applying,
-                CameraChange::After,
-            )
+            (CameraChange::Before, CameraChange::After)
                 .chain()
                 .after(InputSystem),
         );
 
-        app.add_systems(Update, look_transform_system.in_set(CameraChange::Applying));
+        app.add_systems(
+            Update,
+            look_transform_system
+                .after(CameraChange::Before)
+                .before(CameraChange::After),
+        );
 
         app.init_state::<CameraPerspectiveState>();
 
@@ -57,13 +56,13 @@ pub fn look_transform_system(
 }
 
 #[derive(Bundle)]
-pub struct CameraBundle {
+pub struct MapCameraBundle {
     camera_3d: Camera3dBundle,
     controller: CameraController,
     look_transform: LookTransformBundle,
 }
 
-impl CameraBundle {
+impl MapCameraBundle {
     pub fn new_with_transform(look_transform: LookTransform) -> Self {
         let transform = Transform::from_translation(look_transform.eye)
             .looking_at(look_transform.target, Vec3::Y);
@@ -77,7 +76,7 @@ impl CameraBundle {
     }
 }
 
-impl Default for CameraBundle {
+impl Default for MapCameraBundle {
     fn default() -> Self {
         let look_transform = LookTransform::new(Vec3::ONE * 5.0, Vec3::ZERO, Vec3::Y);
 
@@ -86,7 +85,6 @@ impl Default for CameraBundle {
 
         Self {
             camera_3d: Camera3dBundle {
-                tonemapping: Tonemapping::None,
                 camera: Camera {
                     msaa_writeback: false,
                     ..Default::default()
@@ -111,8 +109,6 @@ impl Default for CameraBundle {
 pub enum CameraChange {
     /// Systems that should run before any changes to the camera transform are made
     Before,
-    /// Systems that should run while the camera transform are made
-    Applying,
     /// Systems that should run after any changes to the camera transform are made
     After,
 }

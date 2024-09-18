@@ -96,6 +96,7 @@ pub(crate) struct CameraControllerPlugin;
 
 impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<CameraController>();
         app.register_type::<CameraControllerSettings>();
         app.init_resource::<CameraControllerSettings>();
 
@@ -108,7 +109,7 @@ impl Plugin for CameraControllerPlugin {
             Update,
             (
                 control_system
-                    .in_set(CameraChange::Applying)
+                    .after(CameraChange::Before)
                     .before(super::look_transform_system)
                     .run_if(on_event::<ControlEvent>()),
                 clear_inputs_on_focus.after(CameraChange::After),

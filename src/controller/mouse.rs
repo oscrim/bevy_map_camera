@@ -131,7 +131,7 @@ fn grab_pan(
                 };
 
                 *saved_smoother_weight = smoother.lag_weight;
-                smoother.lag_weight = 0.0;
+                smoother.lag_weight = 0.1;
 
                 *first_ray_hit = Some(ray.get_point(target_distance));
             }
