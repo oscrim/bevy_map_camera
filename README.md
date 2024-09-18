@@ -1,6 +1,11 @@
 # `bevy_map_camera`
 
+[![docs.rs](https://docs.rs/bevy_map_camera/badge.svg)](https://docs.rs/bevy_map_camera)
+[![crates.io](https://img.shields.io/crates/v/bevy_map_camera)](https://crates.io/crates/bevy_map_camera)
+
 A 3D camera controller inspired by Google Maps, [f4maps](https://demo.f4map.com/) and [Change Finder](https://chargefinder.com/nearby).
+
+![bevy_map_camera example](https://github.com/user-attachments/assets/1ac13767-9ad9-495f-90fd-9f8b765347ba)
 
 Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth-bevy-cameras`](https://github.com/bonsairobo/smooth-bevy-cameras).
 
@@ -9,13 +14,16 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
 - Orbital camera
 - Zoom towards pointer
 - Grab pan
-- Focus point follows XZ-plane
+- Camera target follows XZ-plane
 - Support for Perspective and Orthographic projection
 - Smoothed movement
 - Customizable keyboard/mouse controls
 - Touch support
+  - One finger pan
+  - Two finger rotate
+  - Pinch to zoom
 
-## Usage
+## Quick Start
 
 ```rs
 use bevy::prelude::*;
