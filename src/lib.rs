@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use bevy::prelude::*;
 
 pub mod controller;
@@ -109,10 +111,6 @@ impl Default for MapCameraBundle {
     }
 }
 
-/// CameraChange is used to make sure that systems that should run after any camera change is actually
-/// run after them while keeping the plugins decoupled. For example, when the camera is moved using the
-/// [controller::CameraControllerPlugin] the focusmarker from the [focusmarker::FocusMarkerPlugin]
-/// must be updated after all camera changes.
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum CameraChange {
     /// Systems that should run before any changes to the camera transform are made
@@ -121,7 +119,6 @@ pub enum CameraChange {
     After,
 }
 
-/// To change projection [ChangeProjectionPlugin](projection::ChangeProjectionPlugin) must be enabled
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Default, States)]
 pub enum CameraPerspectiveState {
     #[default]
