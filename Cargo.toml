@@ -2,6 +2,12 @@
 name = "bevy_map_camera"
 version = "0.1.0"
 edition = "2021"
+description = "3D Camera Controller for Bevy"
+authors = ["Oscar Rimsby <oscar.rimsby@mobilaris.se>"]
+keywords = ["bevy", "camera"]
+repository = "https://github.com/oscrim/bevy_map_camera"
+rust-version = "1.80"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
