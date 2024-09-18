@@ -22,6 +22,7 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
   - One finger pan
   - Two finger rotate
   - Pinch to zoom
+- Supports Easing though [`bevy_easings`](https://github.com/vleue/bevy_easings)
 
 ## Quick Start
 

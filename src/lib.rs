@@ -41,6 +41,9 @@ impl Plugin for MapCameraPlugin {
             controller::CameraControllerPlugin,
             projection::ChangeProjectionPlugin,
         ));
+
+        #[cfg(feature = "bevy_easings")]
+        app.add_systems(Update, bevy_easings::custom_ease_system::<LookTransform>);
     }
 }
 
@@ -59,9 +62,9 @@ fn look_transform_system(
 
 #[derive(Bundle)]
 pub struct MapCameraBundle {
-    camera_3d: Camera3dBundle,
-    controller: CameraController,
-    look_transform: LookTransformBundle,
+    pub camera_3d: Camera3dBundle,
+    pub controller: CameraController,
+    pub look_transform: LookTransformBundle,
 }
 
 impl MapCameraBundle {
