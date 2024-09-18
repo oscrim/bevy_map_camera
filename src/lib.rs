@@ -43,7 +43,10 @@ impl Plugin for MapCameraPlugin {
         ));
 
         #[cfg(feature = "bevy_easings")]
-        app.add_systems(Update, bevy_easings::custom_ease_system::<LookTransform>);
+        app.add_systems(
+            Update,
+            bevy_easings::custom_ease_system::<LookTransform>.in_set(CameraChange::Before),
+        );
     }
 }
 
