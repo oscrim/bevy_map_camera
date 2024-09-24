@@ -14,14 +14,15 @@ impl Plugin for MouseController {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (zoom_orbit_camera, pan_rotate_orbit_camera, grab_pan).in_set(CameraChange::Before),
+            (zoom_orbit_camera, pan_rotate_orbit_camera, grab_pan)
+                .chain()
+                .in_set(CameraChange::Before),
         );
     }
 }
 
 /// Handles the panning of the camera
 fn pan_rotate_orbit_camera(
-    //query: Query<&CameraController, With<MainCamera>>,
     settings: Res<CameraControllerSettings>,
     camstate: Res<State<CameraPerspectiveState>>,
     mut camera_writer: EventWriter<ControlEvent>,
@@ -98,23 +99,27 @@ fn grab_pan(
     settings: Res<CameraControllerSettings>,
     inputs: Inputs,
     mut first_ray_hit: Local<Option<Vec3>>,
-    primary_window_q: Query<&Window, With<PrimaryWindow>>,
+    mut primary_window_q: Query<&mut Window, With<PrimaryWindow>>,
     mut camera_writer: EventWriter<ControlEvent>,
     mut saved_smoother_weight: Local<f32>,
 ) {
     let (camera_gt, look_transform, camera, mut smoother) = cam_q.single_mut();
-    let primary_window = primary_window_q.single();
+    let mut primary_window = primary_window_q.single_mut();
     let drag_buttons = &settings.buttons.pan;
 
     if inputs.multi_just_pressed(drag_buttons) {
         if let Some(mouse_pos) = primary_window.cursor_position() {
-            if let Some(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window) {
+            if let Some(ray) =
+                ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window.as_ref())
+            {
                 let Some(target_distance) =
                     ray.intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
                 else {
                     log::info!("Grab pan intersection did not intersect with Y plane");
                     return;
                 };
+
+                primary_window.cursor.icon = CursorIcon::Grabbing;
 
                 *saved_smoother_weight = smoother.lag_weight;
                 smoother.lag_weight = 0.1;
@@ -127,6 +132,7 @@ fn grab_pan(
     if inputs.multi_just_released(drag_buttons) {
         smoother.lag_weight = *saved_smoother_weight;
         *first_ray_hit = None;
+        primary_window.cursor.icon = CursorIcon::Default;
     }
 
     if inputs.multi_pressed(drag_buttons) {
@@ -136,7 +142,9 @@ fn grab_pan(
         };
 
         if let Some(mouse_pos) = primary_window.cursor_position() {
-            if let Some(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window) {
+            if let Some(ray) =
+                ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window.as_ref())
+            {
                 let target_distance = ray
                     .intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
                     .expect("Cursor click did not intersect with Y plane");

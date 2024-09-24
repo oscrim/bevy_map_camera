@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::inputs::{InputButton, Inputs};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
 use bevy::log::debug;
@@ -9,6 +11,13 @@ pub(super) struct MouseKeyboardInputs<'w, 's> {
     inputs: Inputs<'w, 's>,
     ev_motion: EventReader<'w, 's, MouseMotion>,
     ev_scroll: EventReader<'w, 's, MouseWheel>,
+}
+
+impl<'w, 's> Deref for MouseKeyboardInputs<'w, 's> {
+    type Target = Inputs<'w, 's>;
+    fn deref(&self) -> &Self::Target {
+        &self.inputs
+    }
 }
 
 impl<'w, 's> MouseKeyboardInputs<'w, 's> {
