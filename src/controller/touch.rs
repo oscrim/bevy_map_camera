@@ -1,6 +1,6 @@
+use super::ray_from_screenspace;
 use crate::{look_transform::Smoother, CameraPerspectiveState};
 use bevy::{prelude::*, window::PrimaryWindow};
-use bevy_mod_raycast::prelude::ray_from_screenspace;
 
 use crate::{CameraChange, LookTransform};
 

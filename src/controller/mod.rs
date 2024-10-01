@@ -204,3 +204,18 @@ fn clear_inputs_on_focus(
         }
     }
 }
+
+fn ray_from_screenspace(
+    cursor_pos_screen: Vec2,
+    camera: &Camera,
+    camera_transform: &GlobalTransform,
+    window: &Window,
+) -> Option<Ray3d> {
+    let mut viewport_pos = cursor_pos_screen;
+    if let Some(viewport) = &camera.viewport {
+        viewport_pos -= viewport.physical_position.as_vec2() / window.scale_factor();
+    }
+    camera
+        .viewport_to_world(camera_transform, viewport_pos)
+        .map(Ray3d::from)
+}

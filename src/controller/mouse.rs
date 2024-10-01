@@ -1,7 +1,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
+use super::ray_from_screenspace;
 use crate::{look_transform::Smoother, CameraPerspectiveState};
-use bevy_mod_raycast::prelude::*;
 
 use super::{
     mouse_input::MouseKeyboardInputs, CameraController, CameraControllerSettings, ControlEvent,

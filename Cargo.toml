@@ -24,7 +24,6 @@ bevy = { version = "0.14", default-features = false, features = [
     "bevy_state",
 ] }
 bevy_input = { version = "0.14" }
-bevy_mod_raycast = "0.18.0"
 
 bevy_easings = { version = "0.14.0", optional = true }
 
