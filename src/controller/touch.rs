@@ -95,6 +95,8 @@ fn grab_pan(
     primary_window_q: Query<&Window, With<PrimaryWindow>>,
     mut camera_writer: EventWriter<ControlEvent>,
     mut saved_smoother_weight: Local<f32>,
+    mut over_threshold: Local<bool>,
+    mut first_screen_touch: Local<Option<Vec2>>,
 ) {
     let (camera_gt, look_transform, camera, mut smoother) = cam_q.single_mut();
     let primary_window = primary_window_q.single();
@@ -112,15 +114,22 @@ fn grab_pan(
             smoother.lag_weight = 0.1;
 
             *first_ray_hit = Some(ray.get_point(target_distance));
+            *over_threshold = false;
+            *first_screen_touch = Some(touch_pos);
         }
     }
 
     if inputs.one_just_released() {
         smoother.lag_weight = *saved_smoother_weight;
         *first_ray_hit = None;
+        *first_screen_touch = None;
     }
 
-    if let (Some(touch_pos), Some(first_hit)) = (inputs.get_one_touch_drag_pos(), *first_ray_hit) {
+    if let (Some(touch_pos), Some(first_hit), Some(screen_touch)) = (
+        inputs.get_one_touch_drag_pos(),
+        *first_ray_hit,
+        *first_screen_touch,
+    ) {
         if let Some(ray) = ray_from_screenspace(touch_pos, camera, camera_gt, primary_window) {
             let target_distance = ray
                 .intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
@@ -136,7 +145,10 @@ fn grab_pan(
 
             let first_hit_diff = first_hit - new_hit - smoothing_target_diff;
 
-            camera_writer.send(ControlEvent::TranslateTarget(first_hit_diff));
+            if touch_pos.distance(screen_touch) > 3.0 || *over_threshold {
+                *over_threshold = true;
+                camera_writer.send(ControlEvent::TranslateTarget(first_hit_diff));
+            }
         }
     }
 }
