@@ -159,6 +159,12 @@ fn control_system(
             } => {
                 radius_scalar *= zoom_scalar;
 
+                let new_radius = radius_scalar * radius;
+
+                if new_radius < settings.minimum_zoom || new_radius > settings.maximum_zoom {
+                    continue;
+                }
+
                 let mut dir = transform.target - *zoom_target;
                 dir.y = 0.0;
 
