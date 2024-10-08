@@ -126,7 +126,7 @@ fn control_system(
     let (mut projection, mut transform, controller) = camera.single_mut();
 
     if !controller.enabled {
-        // Read all events to mark them as read as events live for two frames
+        // Read all events to mark them as read
         for _ev in events.read() {}
         return;
     }

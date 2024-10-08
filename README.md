@@ -22,7 +22,8 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
   - One finger pan
   - Two finger rotate
   - Pinch to zoom
-- Supports Easing though [`bevy_easings`](https://github.com/vleue/bevy_easings)
+- Supports Easing though [`bevy_easings`](https://github.com/vleue/bevy_easings), part of `default` features.
+- Supports Tweening through [`bevy_tweening`](https://github.com/djeedai/bevy_tweening), requires `bevy_tweening` feature.
 
 ## Quick Start
 
@@ -56,3 +57,11 @@ fn setup(
 ```
 
 Check out the [projection example](https://github.com/oscrim/bevy_map_camera/blob/main/examples/projection.rs) to see how to change between Perspective and Orthographic.
+
+## Compatible Bevy versions
+
+The `main` branch is compatible with the latest Bevy release.
+
+| `bevy_map_camera` | `bevy` |
+| :--               | :--    |
+| `0.1`             | `0.14` |
