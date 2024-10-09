@@ -14,6 +14,7 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
 - Orbital camera
 - Zoom towards pointer
 - Grab pan
+  - Configurable height
 - Camera target follows XZ-plane
 - Support for Perspective and Orthographic projection
 - Smoothed movement
@@ -23,7 +24,11 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
   - Two finger rotate
   - Pinch to zoom
 - Supports Easing though [`bevy_easings`](https://github.com/vleue/bevy_easings), part of `default` features.
+  - Implemented for `LookTransform`
 - Supports Tweening through [`bevy_tweening`](https://github.com/djeedai/bevy_tweening), requires `bevy_tweening` feature.
+  - Lenses
+    - `LookTransformLens`
+    - `GrabHeightLens`
 
 ## Quick Start
 
@@ -62,6 +67,6 @@ Check out the [projection example](https://github.com/oscrim/bevy_map_camera/blo
 
 The `main` branch is compatible with the latest Bevy release.
 
-| `bevy_map_camera` | `bevy` |
-| :--               | :--    |
-| `0.1`             | `0.14` |
+| bevy_map_camera | bevy |
+| :--             | :--  |
+| 0.1             | 0.14 |

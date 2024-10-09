@@ -80,9 +80,10 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let Some(target_distance) =
-        ray.intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
-    else {
+    let Some(target_distance) = ray.intersect_plane(
+        Vec3::Y * controller.grab_height,
+        InfinitePlane3d { normal: Dir3::Y },
+    ) else {
         return;
     };
 
@@ -95,7 +96,13 @@ fn zoom_orbit_camera(
 }
 
 fn grab_pan(
-    mut cam_q: Query<(&GlobalTransform, &LookTransform, &Camera, &mut Smoother)>,
+    mut cam_q: Query<(
+        &GlobalTransform,
+        &LookTransform,
+        &Camera,
+        &mut Smoother,
+        &CameraController,
+    )>,
     settings: Res<CameraControllerSettings>,
     inputs: Inputs,
     mut first_ray_hit: Local<Option<Vec3>>,
@@ -103,7 +110,7 @@ fn grab_pan(
     mut camera_writer: EventWriter<ControlEvent>,
     mut saved_smoother_weight: Local<f32>,
 ) {
-    let (camera_gt, look_transform, camera, mut smoother) = cam_q.single_mut();
+    let (camera_gt, look_transform, camera, mut smoother, controller) = cam_q.single_mut();
     let mut primary_window = primary_window_q.single_mut();
     let drag_buttons = &settings.buttons.pan;
 
@@ -112,10 +119,11 @@ fn grab_pan(
             if let Some(ray) =
                 ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window.as_ref())
             {
-                let Some(target_distance) =
-                    ray.intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
-                else {
-                    log::info!("Grab pan intersection did not intersect with Y plane");
+                let Some(target_distance) = ray.intersect_plane(
+                    Vec3::Y * controller.grab_height,
+                    InfinitePlane3d { normal: Dir3::Y },
+                ) else {
+                    log::error!("Grab pan intersection did not intersect with Grab plane");
                     return;
                 };
 
@@ -145,9 +153,13 @@ fn grab_pan(
             if let Some(ray) =
                 ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window.as_ref())
             {
-                let target_distance = ray
-                    .intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
-                    .expect("Cursor click did not intersect with Y plane");
+                let Some(target_distance) = ray.intersect_plane(
+                    Vec3::Y * controller.grab_height,
+                    InfinitePlane3d { normal: Dir3::Y },
+                ) else {
+                    log::error!("Grab pan intersection did not intersect with Grab plane");
+                    return;
+                };
                 let new_hit = ray.get_point(target_distance);
 
                 // Compensate for look transform smoothing to prevent jittering

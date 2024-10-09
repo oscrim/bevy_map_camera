@@ -68,6 +68,8 @@ pub struct CameraController {
     pub enabled: bool,
     pub pixels_per_line: f32,
     pub smoothing_weight: f32,
+    /// The height of the grab plane that the camera moves along
+    pub grab_height: f32,
 }
 
 impl Default for CameraController {
@@ -76,7 +78,21 @@ impl Default for CameraController {
             enabled: true,
             pixels_per_line: 53.0,
             smoothing_weight: 0.8,
+            grab_height: 0.0,
         }
+    }
+}
+
+#[cfg(feature = "bevy_tweening")]
+pub struct GrabHeightLens {
+    pub start: f32,
+    pub end: f32,
+}
+
+#[cfg(feature = "bevy_tweening")]
+impl bevy_tweening::Lens<CameraController> for GrabHeightLens {
+    fn lerp(&mut self, target: &mut dyn bevy_tweening::Targetable<CameraController>, ratio: f32) {
+        target.grab_height = self.start.lerp(self.end, ratio);
     }
 }
 
@@ -107,14 +123,41 @@ impl Plugin for CameraControllerPlugin {
         app.add_systems(
             Update,
             (
-                control_system
+                (
+                    control_system.run_if(on_event::<ControlEvent>()),
+                    update_height,
+                )
+                    .chain()
                     .after(CameraChange::Before)
-                    .before(super::look_transform_system)
-                    .run_if(on_event::<ControlEvent>()),
+                    .before(super::look_transform_system),
                 clear_inputs_on_focus.after(CameraChange::After),
             ),
         );
+
+        #[cfg(feature = "bevy_tweening")]
+        app.add_systems(
+            Update,
+            bevy_tweening::component_animator_system::<CameraController>
+                .in_set(CameraChange::Before),
+        );
     }
+}
+
+fn update_height(
+    mut camera: Query<(&mut LookTransform, &CameraController), Changed<CameraController>>,
+) {
+    let Ok((mut transform, controller)) = camera.get_single_mut() else {
+        return;
+    };
+
+    if !controller.enabled {
+        return;
+    }
+
+    let y_diff = controller.grab_height - transform.target.y;
+    transform.target.y = controller.grab_height;
+
+    transform.eye.y += y_diff;
 }
 
 fn control_system(
@@ -179,9 +222,12 @@ fn control_system(
         .min(settings.maximum_zoom)
         .max(settings.minimum_zoom);
 
-    transform.target.y = 0.0;
+    transform.target.y = controller.grab_height;
+
     transform.eye = transform.target + new_radius * look_angles.unit_vector();
-    transform.eye.y = transform.eye.y.max(0.0);
+
+    // Add one to make sure the eye is inside the grab plane
+    transform.eye.y = transform.eye.y.max(controller.grab_height + 1.0);
 
     if let CameraPerspectiveState::Orthographic = camera_state.get() {
         if let Projection::Orthographic(o) = &mut *projection {

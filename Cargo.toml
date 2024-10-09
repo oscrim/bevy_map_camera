@@ -48,3 +48,7 @@ required-features = ["bevy_easings"]
 [[example]]
 name = "tween"
 required-features = ["bevy_tweening"]
+
+[[example]]
+name = "grab_height"
+required-features = ["bevy_tweening"]

@@ -1,4 +1,4 @@
-use super::ray_from_screenspace;
+use super::{ray_from_screenspace, CameraController};
 use crate::{look_transform::Smoother, CameraPerspectiveState};
 use bevy::{prelude::*, window::PrimaryWindow};
 
@@ -30,7 +30,7 @@ impl Plugin for TouchInputPlugin {
 /// Handles the zooming of the orbital camera
 fn zoom_orbit_camera(
     mut touches: TouchInputs,
-    query: Query<(&Camera, &GlobalTransform, &LookTransform)>,
+    query: Query<(&Camera, &GlobalTransform, &LookTransform, &CameraController)>,
     main_window: Query<&Window, With<PrimaryWindow>>,
     settings: Res<CameraControllerSettings>,
     mut camera_writer: EventWriter<ControlEvent>,
@@ -44,7 +44,7 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let (camera, camera_gt, camera_lt) = query.single();
+    let (camera, camera_gt, camera_lt, controller) = query.single();
     let window = main_window.single();
 
     let scalar = 1.0 - distance_delta * settings.touch_zoom_sensitivity_modifier;
@@ -58,13 +58,17 @@ fn zoom_orbit_camera(
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
         });
-
+        log::error!("Unable to create ray from screenspace");
         return;
     };
 
-    let target_distance = ray
-        .intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
-        .expect("Cursor click did not intersect with Y plane");
+    let Some(target_distance) = ray.intersect_plane(
+        Vec3::Y * controller.grab_height,
+        InfinitePlane3d { normal: Dir3::Y },
+    ) else {
+        log::error!("Cursor click did not intersect with Grab plane");
+        return;
+    };
 
     let target = ray.get_point(target_distance);
 
@@ -89,7 +93,13 @@ fn rotate_orbit_camera(
 }
 
 fn grab_pan(
-    mut cam_q: Query<(&GlobalTransform, &LookTransform, &Camera, &mut Smoother)>,
+    mut cam_q: Query<(
+        &GlobalTransform,
+        &LookTransform,
+        &Camera,
+        &mut Smoother,
+        &CameraController,
+    )>,
     mut inputs: TouchInputs,
     mut first_ray_hit: Local<Option<Vec3>>,
     primary_window_q: Query<&Window, With<PrimaryWindow>>,
@@ -98,15 +108,16 @@ fn grab_pan(
     mut over_threshold: Local<bool>,
     mut first_screen_touch: Local<Option<Vec2>>,
 ) {
-    let (camera_gt, look_transform, camera, mut smoother) = cam_q.single_mut();
+    let (camera_gt, look_transform, camera, mut smoother, controller) = cam_q.single_mut();
     let primary_window = primary_window_q.single();
 
     if let Some(touch_pos) = inputs.get_one_touch_just_press() {
         if let Some(ray) = ray_from_screenspace(touch_pos, camera, camera_gt, primary_window) {
-            let Some(target_distance) =
-                ray.intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
-            else {
-                log::info!("Grab pan intersection did not intersect with Y plane");
+            let Some(target_distance) = ray.intersect_plane(
+                Vec3::Y * controller.grab_height,
+                InfinitePlane3d { normal: Dir3::Y },
+            ) else {
+                log::error!("Grab pan intersection did not intersect with Grab plane");
                 return;
             };
 
@@ -131,9 +142,13 @@ fn grab_pan(
         *first_screen_touch,
     ) {
         if let Some(ray) = ray_from_screenspace(touch_pos, camera, camera_gt, primary_window) {
-            let target_distance = ray
-                .intersect_plane(Vec3::default(), InfinitePlane3d { normal: Dir3::Y })
-                .expect("Cursor click did not intersect with Y plane");
+            let Some(target_distance) = ray.intersect_plane(
+                Vec3::Y * controller.grab_height,
+                InfinitePlane3d { normal: Dir3::Y },
+            ) else {
+                log::error!("Grab pan intersection did not intersect with Grab plane");
+                return;
+            };
             let new_hit = ray.get_point(target_distance);
 
             // Compensate for look transform smoothing to prevent jittering
