@@ -9,6 +9,7 @@ pub mod look_transform;
 pub mod projection;
 
 use bevy_input::InputSystem;
+
 // re-exports
 pub use controller::{CameraController, CameraControllerSettings};
 pub use look_transform::LookTransform;
@@ -57,7 +58,8 @@ impl Plugin for MapCameraPlugin {
             app.add_systems(
                 Update,
                 bevy_tweening::component_animator_system::<LookTransform>
-                    .in_set(CameraChange::Before),
+                    .in_set(CameraChange::Before)
+                    .in_set(bevy_tweening::AnimationSystem::AnimationUpdate),
             );
         }
     }
