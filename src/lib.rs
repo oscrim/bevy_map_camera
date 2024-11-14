@@ -49,7 +49,7 @@ impl Plugin for MapCameraPlugin {
             Update,
             bevy_easings::custom_ease_system::<LookTransform>.in_set(CameraChange::Before),
         );
-        #[cfg(feature = "bevy_easings")]
+        #[cfg(feature = "bevy_tweening")]
         {
             if !app.is_plugin_added::<bevy_tweening::TweeningPlugin>() {
                 app.add_plugins(bevy_tweening::TweeningPlugin);
