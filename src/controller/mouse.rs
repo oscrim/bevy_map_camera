@@ -1,4 +1,8 @@
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{
+    prelude::*,
+    window::{PrimaryWindow, SystemCursorIcon},
+    winit::cursor::CursorIcon,
+};
 
 use super::ray_from_screenspace;
 use crate::{look_transform::Smoother, CameraPerspectiveState};
@@ -71,7 +75,7 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let Some(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, window) else {
+    let Ok(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, window) else {
         camera_writer.send(ControlEvent::Zoom {
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
@@ -96,6 +100,7 @@ fn zoom_orbit_camera(
 }
 
 fn grab_pan(
+    mut commands: Commands,
     mut cam_q: Query<(
         &GlobalTransform,
         &LookTransform,
@@ -106,19 +111,17 @@ fn grab_pan(
     settings: Res<CameraControllerSettings>,
     inputs: Inputs,
     mut first_ray_hit: Local<Option<Vec3>>,
-    mut primary_window_q: Query<&mut Window, With<PrimaryWindow>>,
+    mut primary_window_q: Query<(Entity, Option<&mut CursorIcon>, &Window), With<PrimaryWindow>>,
     mut camera_writer: EventWriter<ControlEvent>,
     mut saved_smoother_weight: Local<f32>,
 ) {
     let (camera_gt, look_transform, camera, mut smoother, controller) = cam_q.single_mut();
-    let mut primary_window = primary_window_q.single_mut();
+    let (window_entity, mut cursor_icon, primary_window) = primary_window_q.single_mut();
     let drag_buttons = &settings.buttons.pan;
 
     if inputs.multi_just_pressed(drag_buttons) {
         if let Some(mouse_pos) = primary_window.cursor_position() {
-            if let Some(ray) =
-                ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window.as_ref())
-            {
+            if let Ok(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window) {
                 let Some(target_distance) = ray.intersect_plane(
                     Vec3::Y * controller.grab_height,
                     InfinitePlane3d { normal: Dir3::Y },
@@ -127,7 +130,11 @@ fn grab_pan(
                     return;
                 };
 
-                primary_window.cursor.icon = CursorIcon::Grabbing;
+                if let Some(icon) = cursor_icon.as_mut() {
+                    icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Grabbing));
+                } else if let Some(mut ecmd) = commands.get_entity(window_entity) {
+                    ecmd.insert(CursorIcon::System(SystemCursorIcon::Grabbing));
+                }
 
                 *saved_smoother_weight = smoother.lag_weight;
                 smoother.lag_weight = 0.1;
@@ -140,7 +147,9 @@ fn grab_pan(
     if inputs.multi_just_released(drag_buttons) {
         smoother.lag_weight = *saved_smoother_weight;
         *first_ray_hit = None;
-        primary_window.cursor.icon = CursorIcon::Default;
+        if let Some(icon) = cursor_icon.as_mut() {
+            icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Default));
+        }
     }
 
     if inputs.multi_pressed(drag_buttons) {
@@ -150,9 +159,7 @@ fn grab_pan(
         };
 
         if let Some(mouse_pos) = primary_window.cursor_position() {
-            if let Some(ray) =
-                ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window.as_ref())
-            {
+            if let Ok(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window) {
                 let Some(target_distance) = ray.intersect_plane(
                     Vec3::Y * controller.grab_height,
                     InfinitePlane3d { normal: Dir3::Y },

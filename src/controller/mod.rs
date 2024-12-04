@@ -6,7 +6,7 @@ mod touch_inputs;
 
 use std::f32::consts::PI;
 
-use bevy::{prelude::*, window::WindowFocused};
+use bevy::{prelude::*, render::camera::ViewportConversionError, window::WindowFocused};
 
 use crate::{
     inputs::InputButton, look_angles::LookAngles, CameraChange, CameraPerspectiveState,
@@ -124,7 +124,7 @@ impl Plugin for CameraControllerPlugin {
             Update,
             (
                 (
-                    control_system.run_if(on_event::<ControlEvent>()),
+                    control_system.run_if(on_event::<ControlEvent>),
                     update_height,
                 )
                     .chain()
@@ -256,7 +256,7 @@ fn ray_from_screenspace(
     camera: &Camera,
     camera_transform: &GlobalTransform,
     window: &Window,
-) -> Option<Ray3d> {
+) -> Result<Ray3d, ViewportConversionError> {
     let mut viewport_pos = cursor_pos_screen;
     if let Some(viewport) = &camera.viewport {
         viewport_pos -= viewport.physical_position.as_vec2() / window.scale_factor();

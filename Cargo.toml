@@ -6,12 +6,13 @@ description = "3D Camera Controller for Bevy"
 authors = ["Oscar Rimsby <oscar.rimsby@mobilaris.se>"]
 keywords = ["bevy", "camera"]
 repository = "https://github.com/oscrim/bevy_map_camera"
-rust-version = "1.80"
+rust-version = "1.82"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = ["bevy_easings", "bevy_tweening"]
+#default = ["bevy_easings", "bevy_tweening"]
+default = ["bevy_easings"]
 
 
 [dependencies]
@@ -19,21 +20,21 @@ log = "0.4"
 thiserror = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
-bevy = { version = "0.14", default-features = false, features = [
+bevy = { version = "0.15", default-features = false, features = [
     "bevy_render",
     "bevy_state",
 ] }
-bevy_input = { version = "0.14" }
+bevy_input = { version = "0.15" }
 
-bevy_easings = { version = "0.14.0", optional = true }
-bevy_tweening = { version = "0.11.0", optional = true, default-features = false }
+bevy_easings = { version = "0.15.0", optional = true }
+#bevy_tweening = { version = "0.11.0", optional = true, default-features = false }
 
 [dependencies.approx]
 version = "0.5"
 
 
 [dev-dependencies]
-bevy = { version = "0.14" }
+bevy = { version = "0.15" }
 
 [[example]]
 name = "simple"
@@ -45,9 +46,9 @@ name = "projection"
 name = "easing"
 required-features = ["bevy_easings"]
 
-[[example]]
-name = "tween"
-required-features = ["bevy_tweening"]
+# [[example]]
+# name = "tween"
+# required-features = ["bevy_tweening"]
 
 [[example]]
 name = "grab_height"

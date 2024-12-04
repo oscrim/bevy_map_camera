@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
 };
 
-use bevy_map_camera::{CameraPerspectiveState, LookTransform, MapCameraBundle, MapCameraPlugin};
+use bevy_map_camera::{CameraPerspectiveState, LookTransform, MapCamera, MapCameraPlugin};
 
 const ROTATION_ENABLED: &str = "Press Left Mouse Button to rotate";
 const ROTATION_DISABLED: &str = "Rotation Disabled";
@@ -34,93 +34,87 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // plane
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Plane3d::default().mesh().size(10., 10.)),
-        material: materials.add(Color::from(DARK_GREEN)),
-        ..Default::default()
-    });
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(10., 10.))),
+        MeshMaterial3d(materials.add(Color::from(DARK_GREEN))),
+    ));
 
     // cube
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Cuboid::default()),
-        material: materials.add(Color::from(TAN)),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        ..Default::default()
-    });
+    commands.spawn((
+        Mesh3d(meshes.add(Cuboid::default())),
+        MeshMaterial3d(materials.add(Color::from(TAN))),
+        Transform::from_xyz(0.0, 0.5, 0.0),
+    ));
 
     // light
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
+    commands.spawn((
+        PointLight {
             shadows_enabled: true,
             ..Default::default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..Default::default()
-    });
+        Transform::from_xyz(4.0, 8.0, 4.0),
+    ));
 
     // camera
-    commands.spawn(MapCameraBundle::new_with_transform(LookTransform::new(
-        Vec3 {
-            x: 1.,
-            y: 4.5,
-            z: 15.0,
-        },
-        Vec3::ZERO,
-        Vec3::Y,
-    )));
+    commands.spawn((
+        MapCamera,
+        LookTransform::new(
+            Vec3 {
+                x: 1.,
+                y: 4.5,
+                z: 15.0,
+            },
+            Vec3::ZERO,
+            Vec3::Y,
+        ),
+    ));
 
     // text
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                flex_direction: FlexDirection::Column,
-                ..Default::default()
-            },
+        .spawn(Node {
+            flex_direction: FlexDirection::Column,
             ..Default::default()
         })
         .with_children(|parent| {
             parent.spawn((
-                TextBundle::from_section("Press Right Mouse Button to pan", TextStyle::default())
-                    .with_style(Style {
-                        margin: UiRect::all(Val::Px(5.0)),
-                        ..Default::default()
-                    }),
+                Text("Press Right Mouse Button to pan".to_owned()),
+                Node {
+                    margin: UiRect::all(Val::Px(5.0)),
+                    ..Default::default()
+                },
                 Label,
             ));
 
             parent.spawn((
-                TextBundle::from_section(ROTATION_ENABLED, TextStyle::default()).with_style(
-                    Style {
-                        margin: UiRect::all(Val::Px(5.0)),
-                        align_self: AlignSelf::FlexStart,
-                        ..default()
-                    },
-                ),
+                Text(ROTATION_ENABLED.to_owned()),
+                Node {
+                    margin: UiRect::all(Val::Px(5.0)),
+                    align_self: AlignSelf::FlexStart,
+                    ..default()
+                },
                 Label,
                 RotationLabel,
             ));
 
             parent.spawn((
-                TextBundle::from_section(
-                    "Press Middle Mouse Button to toggle projection",
-                    TextStyle::default(),
-                )
-                .with_style(Style {
+                Text("Press Middle Mouse Button to toggle projection".to_owned()),
+                Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     align_self: AlignSelf::FlexStart,
                     ..default()
-                }),
+                },
                 Label,
             ));
         });
 
     commands.spawn((
-        TextBundle::from_section(PERSPECTIVE, TextStyle::default()).with_style(Style {
+        Text(PERSPECTIVE.to_owned()),
+        Node {
             margin: UiRect::all(Val::Px(5.0)),
             position_type: PositionType::Absolute,
             right: Val::Px(10.0),
             ..default()
-        }),
+        },
         Label,
         ProjectionLabel,
     ));
@@ -155,25 +149,9 @@ fn projection_changed(
         };
 
         //Projection text
-        {
-            let mut text = projection_text.single_mut();
-
-            let mut section = text.sections[0].clone();
-
-            section.value = String::from(p_text);
-
-            text.sections = vec![section];
-        }
+        projection_text.single_mut().0 = String::from(p_text);
 
         //Rotation text
-        {
-            let mut text = rotation_text.single_mut();
-
-            let mut section = text.sections[0].clone();
-
-            section.value = String::from(r_text);
-
-            text.sections = vec![section];
-        }
+        rotation_text.single_mut().0 = String::from(r_text);
     }
 }
