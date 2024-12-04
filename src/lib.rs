@@ -13,7 +13,7 @@ use bevy_input::InputSystem;
 // re-exports
 pub use controller::{CameraController, CameraControllerSettings};
 pub use look_transform::LookTransform;
-use look_transform::{LookTransformBundle, Smoother};
+use look_transform::Smoother;
 
 /// Orbital camera plugin
 #[derive(Clone, Copy)]
@@ -48,7 +48,7 @@ impl Plugin for MapCameraPlugin {
         #[cfg(feature = "bevy_easings")]
         app.add_systems(
             Update,
-            bevy_easings::custom_ease_system::<LookTransform>.in_set(CameraChange::Before),
+            bevy_easings::custom_ease_system::<(), LookTransform>.in_set(CameraChange::Before),
         );
         #[cfg(feature = "bevy_tweening")]
         {
@@ -78,51 +78,62 @@ fn look_transform_system(
     }
 }
 
-#[derive(Bundle)]
-pub struct MapCameraBundle {
-    pub camera_3d: Camera3dBundle,
-    pub controller: CameraController,
-    pub look_transform: LookTransformBundle,
-}
+#[derive(Component)]
+#[require(CameraController, Camera3d, LookTransform, Camera(default_camera))]
+pub struct MapCamera;
 
-impl MapCameraBundle {
-    pub fn new_with_transform(look_transform: LookTransform) -> Self {
-        let transform = Transform::from_translation(look_transform.eye)
-            .looking_at(look_transform.target, Vec3::Y);
-
-        let mut bundle = Self::default();
-
-        bundle.camera_3d.transform = transform;
-        bundle.look_transform.transform = look_transform;
-
-        bundle
+fn default_camera() -> Camera {
+    Camera {
+        msaa_writeback: false,
+        ..Default::default()
     }
 }
 
-impl Default for MapCameraBundle {
-    fn default() -> Self {
-        let look_transform = LookTransform::new(Vec3::ONE * 5.0, Vec3::ZERO, Vec3::Y);
+//#[derive(Bundle)]
+// pub struct MapCameraBundle {
+//     pub camera_3d: Camera3dBundle,
+//     pub controller: CameraController,
+//     pub look_transform: LookTransformBundle,
+// }
 
-        let transform = Transform::from_translation(look_transform.eye)
-            .looking_at(look_transform.target, Vec3::Y);
+// impl MapCameraBundle {
+//     pub fn new_with_transform(look_transform: LookTransform) -> Self {
+//         let transform = Transform::from_translation(look_transform.eye)
+//             .looking_at(look_transform.target, Vec3::Y);
 
-        Self {
-            camera_3d: Camera3dBundle {
-                camera: Camera {
-                    msaa_writeback: false,
-                    ..Default::default()
-                },
-                transform,
-                ..Default::default()
-            },
-            controller: Default::default(),
-            look_transform: LookTransformBundle {
-                transform: look_transform,
-                smoother: Default::default(),
-            },
-        }
-    }
-}
+//         let mut bundle = Self::default();
+
+//         bundle.camera_3d.transform = transform;
+//         bundle.look_transform.transform = look_transform;
+
+//         bundle
+//     }
+// }
+
+// impl Default for MapCameraBundle {
+//     fn default() -> Self {
+//         let look_transform = LookTransform::new(Vec3::ONE * 5.0, Vec3::ZERO, Vec3::Y);
+
+//         let transform = Transform::from_translation(look_transform.eye)
+//             .looking_at(look_transform.target, Vec3::Y);
+
+//         Self {
+//             camera_3d: Camera3dBundle {
+//                 camera: Camera {
+//                     msaa_writeback: false,
+//                     ..Default::default()
+//                 },
+//                 transform,
+//                 ..Default::default()
+//             },
+//             controller: Default::default(),
+//             look_transform: LookTransformBundle {
+//                 transform: look_transform,
+//                 smoother: Default::default(),
+//             },
+//         }
+//     }
+// }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum CameraChange {

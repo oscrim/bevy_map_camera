@@ -13,10 +13,17 @@ pub struct LookTransformBundle {
 /// stay in sync.
 #[derive(Component, Debug, PartialEq, Clone, Copy, Reflect)]
 #[reflect(Component, Default, Debug, PartialEq)]
+#[require(Transform(default_transform), Smoother)]
 pub struct LookTransform {
     pub eye: Vec3,
     pub target: Vec3,
     pub up: Vec3,
+}
+
+fn default_transform() -> Transform {
+    let look_transform = LookTransform::default();
+
+    Transform::from_translation(look_transform.eye).looking_at(look_transform.target, Vec3::Y)
 }
 
 impl From<LookTransform> for Transform {
@@ -28,8 +35,8 @@ impl From<LookTransform> for Transform {
 impl Default for LookTransform {
     fn default() -> Self {
         Self {
-            eye: Vec3::default(),
-            target: Vec3::default(),
+            eye: Vec3::ONE * 5.0,
+            target: Vec3::ZERO,
             up: Vec3::Y,
         }
     }

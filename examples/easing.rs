@@ -5,7 +5,7 @@ use bevy::core_pipeline::auto_exposure::AutoExposurePlugin;
 use bevy::prelude::*;
 
 use bevy_easings::{CustomComponentEase, EaseMethod};
-use bevy_map_camera::{LookTransform, MapCameraBundle, MapCameraPlugin};
+use bevy_map_camera::{LookTransform, MapCamera, MapCameraPlugin};
 
 fn main() {
     let mut app = App::new();
@@ -21,35 +21,32 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // plane
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Plane3d::default().mesh().size(10., 10.)),
-        material: materials.add(Color::from(DARK_GREEN)),
-        ..Default::default()
-    });
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(10., 10.))),
+        MeshMaterial3d(materials.add(Color::from(DARK_GREEN))),
+    ));
 
     let cube_material = materials.add(Color::from(TAN));
 
     // cubes
     for x in -2..=2 {
         for z in -2..=2 {
-            commands.spawn(PbrBundle {
-                mesh: meshes.add(Cuboid::from_size(Vec3::splat(0.2))),
-                material: cube_material.clone(),
-                transform: Transform::from_xyz((x * 2) as f32, 0.1, (z * 2) as f32),
-                ..Default::default()
-            });
+            commands.spawn((
+                Mesh3d(meshes.add(Cuboid::from_size(Vec3::splat(0.2)))),
+                MeshMaterial3d(cube_material.clone()),
+                Transform::from_xyz((x * 2) as f32, 0.1, (z * 2) as f32),
+            ));
         }
     }
 
     // light
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
+    commands.spawn((
+        PointLight {
             shadows_enabled: true,
             ..Default::default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..Default::default()
-    });
+        Transform::from_xyz(4.0, 8.0, 4.0),
+    ));
 
     // easing and camera
     let look_transform_from = LookTransform::new(
@@ -81,5 +78,5 @@ fn setup(
         },
     );
 
-    commands.spawn((MapCameraBundle::default(), easing));
+    commands.spawn((MapCamera, easing));
 }

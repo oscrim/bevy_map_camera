@@ -77,12 +77,11 @@ fn ortho_from_looktransform(transform: &mut LookTransform) -> Projection {
     }
 
     let new_projection = OrthographicProjection {
-        scaling_mode: bevy::render::camera::ScalingMode::FixedVertical(
-            transform.eye.y.abs() / 18.0,
-        ),
+        scaling_mode: bevy::render::camera::ScalingMode::FixedVertical {
+            viewport_height: transform.eye.y.abs() * 15.0 / 18.0,
+        },
         far: 5000.0,
-        scale: 15.0,
-        ..default()
+        ..OrthographicProjection::default_3d()
     }
     .into();
     new_projection

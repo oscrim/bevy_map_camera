@@ -53,7 +53,7 @@ fn zoom_orbit_camera(
         return;
     }
 
-    let Some(ray) = ray_from_screenspace(middle, camera, camera_gt, window) else {
+    let Ok(ray) = ray_from_screenspace(middle, camera, camera_gt, window) else {
         camera_writer.send(ControlEvent::Zoom {
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
@@ -112,7 +112,7 @@ fn grab_pan(
     let primary_window = primary_window_q.single();
 
     if let Some(touch_pos) = inputs.get_one_touch_just_press() {
-        if let Some(ray) = ray_from_screenspace(touch_pos, camera, camera_gt, primary_window) {
+        if let Ok(ray) = ray_from_screenspace(touch_pos, camera, camera_gt, primary_window) {
             let Some(target_distance) = ray.intersect_plane(
                 Vec3::Y * controller.grab_height,
                 InfinitePlane3d { normal: Dir3::Y },
@@ -141,7 +141,7 @@ fn grab_pan(
         *first_ray_hit,
         *first_screen_touch,
     ) {
-        if let Some(ray) = ray_from_screenspace(touch_pos, camera, camera_gt, primary_window) {
+        if let Ok(ray) = ray_from_screenspace(touch_pos, camera, camera_gt, primary_window) {
             let Some(target_distance) = ray.intersect_plane(
                 Vec3::Y * controller.grab_height,
                 InfinitePlane3d { normal: Dir3::Y },
