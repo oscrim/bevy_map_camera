@@ -35,7 +35,7 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
 ```rs
 use bevy::prelude::*;
 
-use bevy_map_cam::{CameraBundle, LookTransform, MapCameraPlugin};
+use bevy_map_cam::{MapCamera, LookTransform, MapCameraPlugin};
 
 fn main() {
     let mut app = App::new();
@@ -48,16 +48,17 @@ fn main() {
 
 fn setup(
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-        commands.spawn(CameraBundle::new_with_transform(LookTransform::new(
-        Vec3 {
-            x: 1.,
-            y: 2.5,
-            z: 5.0,
-        },
-        Vec3::ZERO,
-        Vec3::Y,
-    )));
+    // plane
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(10., 10.))),
+        MeshMaterial3d(materials.add(Color::from(DARK_GREEN))),
+    ));
+
+    // Camera
+    commands.spawn(MapCamera);
 }
 ```
 
@@ -69,4 +70,5 @@ The `main` branch is compatible with the latest Bevy release.
 
 | bevy_map_camera | bevy |
 | :--             | :--  |
+| 0.2             | 0.15 |
 | 0.1             | 0.14 |
