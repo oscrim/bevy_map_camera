@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use bevy_input::common_conditions::input_just_pressed;
 use bevy_map_camera::controller::GrabHeightLens;
 use bevy_map_camera::{
-    CameraController, CameraControllerSettings, LookTransform, MapCameraBundle, MapCameraPlugin,
+    CameraController, CameraControllerSettings, LookTransform, MapCamera, MapCameraPlugin,
 };
 use bevy_tweening::{Animator, EaseMethod, RepeatCount, RepeatStrategy, Tween};
 
@@ -34,111 +34,96 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // plane
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Plane3d::default().mesh().size(10., 10.)),
-        material: materials.add(Color::from(DARK_GREEN)),
-        ..Default::default()
-    });
+    commands.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(10., 10.))),
+        MeshMaterial3d(materials.add(Color::from(DARK_GREEN))),
+    ));
 
     let cube_material = materials.add(Color::from(TAN));
 
     // cubes
     for x in -2..=2 {
         for z in -2..=2 {
-            commands.spawn(PbrBundle {
-                mesh: meshes.add(Cuboid::from_size(Vec3::splat(0.2))),
-                material: cube_material.clone(),
-                transform: Transform::from_xyz((x * 2) as f32, 0.1, (z * 2) as f32),
-                ..Default::default()
-            });
+            commands.spawn((
+                Mesh3d(meshes.add(Cuboid::from_size(Vec3::splat(0.2)))),
+                MeshMaterial3d(cube_material.clone()),
+                Transform::from_xyz((x * 2) as f32, 0.1, (z * 2) as f32),
+            ));
         }
     }
 
     // light
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
+    commands.spawn((
+        PointLight {
             shadows_enabled: true,
             ..Default::default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..Default::default()
-    });
+        Transform::from_xyz(4.0, 8.0, 4.0),
+    ));
 
     // camera
-    commands.spawn(MapCameraBundle::new_with_transform(LookTransform::new(
-        Vec3 {
-            x: 1.,
-            y: 8.5,
-            z: 10.0,
-        },
-        Vec3::ZERO,
-        Vec3::Y,
-    )));
+    commands.spawn((
+        MapCamera,
+        LookTransform::new(
+            Vec3 {
+                x: 1.,
+                y: 8.5,
+                z: 10.0,
+            },
+            Vec3::ZERO,
+            Vec3::Y,
+        ),
+    ));
 
     // text
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                flex_direction: FlexDirection::Column,
-                ..Default::default()
-            },
+        .spawn(Node {
+            flex_direction: FlexDirection::Column,
             ..Default::default()
         })
         .with_children(|parent| {
             parent.spawn((
-                TextBundle::from_section(
-                    format!("Press {:?} to pan", settings.buttons.pan),
-                    TextStyle::default(),
-                )
-                .with_style(Style {
+                Text(format!("Press {:?} to pan", settings.buttons.pan)),
+                Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..Default::default()
-                }),
+                },
                 Label,
             ));
 
             parent.spawn((
-                TextBundle::from_section(
-                    format!("Press {:?} to rotate", settings.buttons.rotate),
-                    TextStyle::default(),
-                )
-                .with_style(Style {
+                Text(format!("Press {:?} to rotate", settings.buttons.rotate)),
+                Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..default()
-                }),
+                },
                 Label,
             ));
 
             parent.spawn((
-                TextBundle::from_section("Press ArrowUp to increase height", TextStyle::default())
-                    .with_style(Style {
-                        margin: UiRect::all(Val::Px(5.0)),
-                        ..default()
-                    }),
-                Label,
-            ));
-
-            parent.spawn((
-                TextBundle::from_section(
-                    "Press ArrowDown to decrease height",
-                    TextStyle::default(),
-                )
-                .with_style(Style {
+                Text::new("Press ArrowUp to increase height"),
+                Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..default()
-                }),
+                },
                 Label,
             ));
 
             parent.spawn((
-                TextBundle::from_section(
-                    "Press Space to toggle height animation",
-                    TextStyle::default(),
-                )
-                .with_style(Style {
+                Text::new("Press ArrowDown to decrease height"),
+                Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..default()
-                }),
+                },
+                Label,
+            ));
+
+            parent.spawn((
+                Text::new("Press Space to toggle height animation"),
+                Node {
+                    margin: UiRect::all(Val::Px(5.0)),
+                    ..default()
+                },
                 Label,
             ));
         });
@@ -172,7 +157,7 @@ fn toggle_height_animation(
     }
 
     let tween = Tween::new(
-        EaseMethod::Linear,
+        EaseMethod::EaseFunction(EaseFunction::Linear),
         Duration::from_secs(5),
         GrabHeightLens {
             start: controller.grab_height,
@@ -186,11 +171,12 @@ fn toggle_height_animation(
 }
 
 fn draw_plane(mut gizmos: Gizmos, controller_query: Query<&CameraController>) {
-    let position = Vec3::NEG_Z * controller_query.single().grab_height;
+    let translation = Vec3::Y * controller_query.single().grab_height;
+
+    let isometry = Isometry3d::new(translation, Quat::from_axis_angle(Vec3::X, PI / 2.0));
 
     gizmos.grid(
-        position,
-        Quat::from_axis_angle(Vec3::X, PI / 2.0),
+        isometry,
         UVec2::new(10, 10),
         Vec2::new(1.0, 1.0),
         LinearRgba::WHITE,
