@@ -1,8 +1,6 @@
-use bevy::{
-    prelude::*,
-    window::{PrimaryWindow, SystemCursorIcon},
-    winit::cursor::CursorIcon,
-};
+use bevy::prelude::*;
+use bevy_window::{PrimaryWindow, SystemCursorIcon, Window};
+use bevy_winit::cursor::CursorIcon;
 
 use super::ray_from_screenspace;
 use crate::{look_transform::Smoother, CameraProjectionState};

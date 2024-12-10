@@ -6,7 +6,8 @@ mod touch_inputs;
 
 use std::f32::consts::PI;
 
-use bevy::{prelude::*, render::camera::ViewportConversionError, window::WindowFocused};
+use bevy::{prelude::*, render::camera::ViewportConversionError};
+use bevy_window::{Window, WindowFocused};
 
 use crate::{
     inputs::InputButton, look_angles::LookAngles, CameraChange, CameraProjectionState,

@@ -1,6 +1,7 @@
 use super::{ray_from_screenspace, CameraController};
 use crate::{look_transform::Smoother, CameraProjectionState};
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
+use bevy_window::{PrimaryWindow, Window};
 
 use crate::{CameraChange, LookTransform};
 
