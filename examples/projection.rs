@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
 };
 
-use bevy_map_camera::{CameraPerspectiveState, LookTransform, MapCamera, MapCameraPlugin};
+use bevy_map_camera::{CameraProjectionState, LookTransform, MapCamera, MapCameraPlugin};
 
 const ROTATION_ENABLED: &str = "Press Left Mouse Button to rotate";
 const ROTATION_DISABLED: &str = "Rotation Disabled";
@@ -122,16 +122,16 @@ fn setup(
 
 fn trigger_perspective_change(
     button: Res<ButtonInput<MouseButton>>,
-    current_state: Res<State<CameraPerspectiveState>>,
-    mut next_state: ResMut<NextState<CameraPerspectiveState>>,
+    current_state: Res<State<CameraProjectionState>>,
+    mut next_state: ResMut<NextState<CameraProjectionState>>,
 ) {
     if button.just_pressed(MouseButton::Middle) {
         match current_state.get() {
-            CameraPerspectiveState::Orthographic => {
-                next_state.set(CameraPerspectiveState::Perspective)
+            CameraProjectionState::Orthographic => {
+                next_state.set(CameraProjectionState::Perspective)
             }
-            CameraPerspectiveState::Perspective => {
-                next_state.set(CameraPerspectiveState::Orthographic)
+            CameraProjectionState::Perspective => {
+                next_state.set(CameraProjectionState::Orthographic)
             }
         };
     }

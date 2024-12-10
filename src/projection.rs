@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{CameraPerspectiveState, LookTransform};
+use crate::{CameraProjectionState, LookTransform};
 
 /// Change between Perspective and Orthographic projection
 ///
@@ -12,11 +12,11 @@ impl Plugin for ChangeProjectionPlugin {
         app.init_resource::<SavedCamera>();
 
         app.add_systems(
-            OnEnter(CameraPerspectiveState::Perspective),
+            OnEnter(CameraProjectionState::Perspective),
             enter_perspective,
         );
         app.add_systems(
-            OnEnter(CameraPerspectiveState::Orthographic),
+            OnEnter(CameraProjectionState::Orthographic),
             enter_orthographic,
         );
     }

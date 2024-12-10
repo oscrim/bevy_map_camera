@@ -9,7 +9,7 @@ use std::f32::consts::PI;
 use bevy::{prelude::*, render::camera::ViewportConversionError, window::WindowFocused};
 
 use crate::{
-    inputs::InputButton, look_angles::LookAngles, CameraChange, CameraPerspectiveState,
+    inputs::InputButton, look_angles::LookAngles, CameraChange, CameraProjectionState,
     LookTransform,
 };
 
@@ -163,7 +163,7 @@ fn update_height(
 fn control_system(
     mut events: EventReader<ControlEvent>,
     mut camera: Query<(&mut Projection, &mut LookTransform, &CameraController)>,
-    camera_state: Res<State<CameraPerspectiveState>>,
+    camera_state: Res<State<CameraProjectionState>>,
     settings: Res<CameraControllerSettings>,
 ) {
     let (mut projection, mut transform, controller) = camera.single_mut();
@@ -229,7 +229,7 @@ fn control_system(
     // Add one to make sure the eye is inside the grab plane
     transform.eye.y = transform.eye.y.max(controller.grab_height + 1.0);
 
-    if let CameraPerspectiveState::Orthographic = camera_state.get() {
+    if let CameraProjectionState::Orthographic = camera_state.get() {
         if let Projection::Orthographic(o) = &mut *projection {
             o.scale *= new_radius / radius;
         }

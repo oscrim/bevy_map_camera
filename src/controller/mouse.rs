@@ -5,7 +5,7 @@ use bevy::{
 };
 
 use super::ray_from_screenspace;
-use crate::{look_transform::Smoother, CameraPerspectiveState};
+use crate::{look_transform::Smoother, CameraProjectionState};
 
 use super::{
     mouse_input::MouseKeyboardInputs, CameraController, CameraControllerSettings, ControlEvent,
@@ -28,7 +28,7 @@ impl Plugin for MouseController {
 /// Handles the panning of the camera
 fn pan_rotate_orbit_camera(
     settings: Res<CameraControllerSettings>,
-    camstate: Res<State<CameraPerspectiveState>>,
+    camstate: Res<State<CameraProjectionState>>,
     mut camera_writer: EventWriter<ControlEvent>,
     mut mouse_inputs: MouseKeyboardInputs,
 ) {
@@ -39,7 +39,7 @@ fn pan_rotate_orbit_camera(
     }
 
     // only rotate in perspective state
-    if let (Some(rotation_move), CameraPerspectiveState::Perspective) =
+    if let (Some(rotation_move), CameraProjectionState::Perspective) =
         (rotation_move, *camstate.get())
     {
         camera_writer.send(ControlEvent::Orbit(

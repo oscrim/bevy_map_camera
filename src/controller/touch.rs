@@ -1,5 +1,5 @@
 use super::{ray_from_screenspace, CameraController};
-use crate::{look_transform::Smoother, CameraPerspectiveState};
+use crate::{look_transform::Smoother, CameraProjectionState};
 use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::{CameraChange, LookTransform};
@@ -20,7 +20,7 @@ impl Plugin for TouchInputPlugin {
             (
                 zoom_orbit_camera,
                 grab_pan,
-                rotate_orbit_camera.run_if(in_state(CameraPerspectiveState::Perspective)),
+                rotate_orbit_camera.run_if(in_state(CameraProjectionState::Perspective)),
             )
                 .in_set(CameraChange::Before),
         );

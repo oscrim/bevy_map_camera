@@ -37,7 +37,7 @@ impl Plugin for MapCameraPlugin {
                 .before(CameraChange::After),
         );
 
-        app.init_state::<CameraPerspectiveState>();
+        app.init_state::<CameraProjectionState>();
 
         // logic for camera input (buttons and inputdevices)
         app.add_plugins((
@@ -144,7 +144,7 @@ pub enum CameraChange {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Default, States)]
-pub enum CameraPerspectiveState {
+pub enum CameraProjectionState {
     #[default]
     Perspective,
     Orthographic,
