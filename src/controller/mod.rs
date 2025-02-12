@@ -7,7 +7,7 @@ mod touch_inputs;
 use std::f32::consts::PI;
 
 use bevy::{prelude::*, render::camera::ViewportConversionError};
-use bevy_window::{Window, WindowFocused};
+use bevy_window::Window;
 
 use crate::{
     inputs::InputButton, look_angles::LookAngles, CameraChange, CameraProjectionState,
@@ -124,15 +124,12 @@ impl Plugin for CameraControllerPlugin {
         app.add_systems(
             Update,
             (
-                (
-                    control_system.run_if(on_event::<ControlEvent>),
-                    update_height,
-                )
-                    .chain()
-                    .after(CameraChange::Before)
-                    .before(super::look_transform_system),
-                clear_inputs_on_focus.after(CameraChange::After),
-            ),
+                control_system.run_if(on_event::<ControlEvent>),
+                update_height,
+            )
+                .chain()
+                .after(CameraChange::Before)
+                .before(super::look_transform_system),
         );
 
         #[cfg(feature = "bevy_tweening")]
@@ -233,21 +230,6 @@ fn control_system(
     if let CameraProjectionState::Orthographic = camera_state.get() {
         if let Projection::Orthographic(o) = &mut *projection {
             o.scale *= new_radius / radius;
-        }
-    }
-}
-
-/// On the web the input is not cleared if the focus is quickly switched
-/// for example using a shortcut to change tab.
-fn clear_inputs_on_focus(
-    mut keys: ResMut<ButtonInput<KeyCode>>,
-    mut mouse: ResMut<ButtonInput<MouseButton>>,
-    mut event_reader: EventReader<WindowFocused>,
-) {
-    if let Some(ev) = event_reader.read().last() {
-        if ev.focused == true {
-            keys.release_all();
-            mouse.release_all();
         }
     }
 }
