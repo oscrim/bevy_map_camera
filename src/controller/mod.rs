@@ -164,7 +164,9 @@ fn control_system(
     camera_state: Res<State<CameraProjectionState>>,
     settings: Res<CameraControllerSettings>,
 ) {
-    let (mut projection, mut transform, controller) = camera.single_mut();
+    let Ok((mut projection, mut transform, controller)) = camera.get_single_mut() else {
+        return;
+    };
 
     if !controller.enabled {
         // Read all events to mark them as read
