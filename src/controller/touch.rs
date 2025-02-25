@@ -45,7 +45,9 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let (camera, camera_gt, camera_lt, controller) = query.single();
+    let Ok((camera, camera_gt, camera_lt, controller)) = query.get_single() else {
+        return;
+    };
     let window = main_window.single();
 
     let scalar = 1.0 - distance_delta * settings.touch_zoom_sensitivity_modifier;
@@ -109,7 +111,10 @@ fn grab_pan(
     mut over_threshold: Local<bool>,
     mut first_screen_touch: Local<Option<Vec2>>,
 ) {
-    let (camera_gt, look_transform, camera, mut smoother, controller) = cam_q.single_mut();
+    let Ok((camera_gt, look_transform, camera, mut smoother, controller)) = cam_q.get_single_mut()
+    else {
+        return;
+    };
     let primary_window = primary_window_q.single();
 
     if let Some(touch_pos) = inputs.get_one_touch_just_press() {
