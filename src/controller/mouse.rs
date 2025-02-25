@@ -54,7 +54,9 @@ fn zoom_orbit_camera(
     mut mouse_inputs: MouseKeyboardInputs,
     mut camera_writer: EventWriter<ControlEvent>,
 ) {
-    let (controller, camera, camera_gt, camera_lt) = query.single();
+    let Ok((controller, camera, camera_gt, camera_lt)) = query.get_single() else {
+        return;
+    };
     let window = main_window.single();
 
     let scroll_sensitivity = settings.mouse_zoom_sensitivity_modifier;
@@ -113,7 +115,10 @@ fn grab_pan(
     mut camera_writer: EventWriter<ControlEvent>,
     mut saved_smoother_weight: Local<f32>,
 ) {
-    let (camera_gt, look_transform, camera, mut smoother, controller) = cam_q.single_mut();
+    let Ok((camera_gt, look_transform, camera, mut smoother, controller)) = cam_q.get_single_mut()
+    else {
+        return;
+    };
     let (window_entity, mut cursor_icon, primary_window) = primary_window_q.single_mut();
     let drag_buttons = &settings.buttons.pan;
 
