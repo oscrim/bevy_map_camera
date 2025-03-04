@@ -98,7 +98,7 @@ impl bevy_tweening::Lens<CameraController> for GrabHeightLens {
 }
 
 #[derive(Event)]
-enum ControlEvent {
+pub enum ControlEvent {
     Orbit(Vec2),
     /// Translation Delta
     TranslateTarget(Vec3),
