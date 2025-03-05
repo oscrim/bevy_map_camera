@@ -61,7 +61,7 @@ fn zoom_orbit_camera(
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
         });
-        log::error!("Unable to create ray from screenspace");
+        error!("Unable to create ray from screenspace");
         return;
     };
 
@@ -69,7 +69,7 @@ fn zoom_orbit_camera(
         Vec3::Y * controller.grab_height,
         InfinitePlane3d { normal: Dir3::Y },
     ) else {
-        log::error!("Cursor click did not intersect with Grab plane");
+        warn!("Cursor click did not intersect with Grab plane");
         return;
     };
 
@@ -123,7 +123,7 @@ fn grab_pan(
                 Vec3::Y * controller.grab_height,
                 InfinitePlane3d { normal: Dir3::Y },
             ) else {
-                log::error!("Grab pan intersection did not intersect with Grab plane");
+                warn!("Grab pan intersection did not intersect with Grab plane");
                 return;
             };
 
@@ -152,7 +152,7 @@ fn grab_pan(
                 Vec3::Y * controller.grab_height,
                 InfinitePlane3d { normal: Dir3::Y },
             ) else {
-                log::error!("Grab pan intersection did not intersect with Grab plane");
+                warn!("Grab pan intersection did not intersect with Grab plane");
                 return;
             };
             let new_hit = ray.get_point(target_distance);

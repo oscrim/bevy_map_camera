@@ -53,7 +53,7 @@ fn enter_orthographic(
     if let Ok((mut transform, mut projection)) = query.get_single_mut() {
         // Only change if the current projection on the camera is perspective
         let Projection::Perspective(persp) = projection.as_ref() else {
-            log::error!("Camera was not in perspective mode! doing nothing");
+            warn!("Camera was not in perspective mode! doing nothing");
             return;
         };
         saved_proj.0 = Some((persp.clone(), transform.clone()));

@@ -15,7 +15,6 @@ default = ["bevy_easings", "bevy_tweening"]
 
 
 [dependencies]
-log = "0.4"
 thiserror = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 

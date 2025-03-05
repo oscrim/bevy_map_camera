@@ -129,7 +129,7 @@ fn grab_pan(
                     Vec3::Y * controller.grab_height,
                     InfinitePlane3d { normal: Dir3::Y },
                 ) else {
-                    log::error!("Grab pan intersection did not intersect with Grab plane");
+                    warn!("Grab pan intersection did not intersect with Grab plane");
                     return;
                 };
 
@@ -167,7 +167,7 @@ fn grab_pan(
                     Vec3::Y * controller.grab_height,
                     InfinitePlane3d { normal: Dir3::Y },
                 ) else {
-                    log::error!("Grab pan intersection did not intersect with Grab plane");
+                    warn!("Grab pan intersection did not intersect with Grab plane");
                     return;
                 };
                 let new_hit = ray.get_point(target_distance);
