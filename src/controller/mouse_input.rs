@@ -2,7 +2,6 @@ use std::ops::Deref;
 
 use crate::inputs::{InputButton, Inputs};
 use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy::log::debug;
 use bevy::prelude::EventReader;
 use bevy::{ecs::system::SystemParam, prelude::Vec2};
 
@@ -48,7 +47,6 @@ impl<'w, 's> MouseKeyboardInputs<'w, 's> {
             };
 
             scalar *= 1.0 - scroll_amount * scroll_sensitivity;
-            debug!("scroll event: {}", ev.y);
         }
 
         Some(scalar)

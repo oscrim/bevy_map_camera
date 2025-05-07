@@ -140,7 +140,7 @@ impl<'w, 's> TouchInputs<'w, 's> {
         Some(avg)
     }
 
-    pub fn get_one_touch_just_press(&mut self) -> Option<Vec2> {
+    pub fn _get_one_touch_just_press(&mut self) -> Option<Vec2> {
         if self.touches.any_just_released() {
             *self.last_touch_1 = None;
         }
@@ -153,11 +153,11 @@ impl<'w, 's> TouchInputs<'w, 's> {
         Some(touch1.position())
     }
 
-    pub fn one_just_released(&mut self) -> bool {
+    pub fn _one_just_released(&mut self) -> bool {
         self.touches.iter_just_released().count() == 1
     }
 
-    pub fn get_one_touch_drag_pos(&mut self) -> Option<Vec2> {
+    pub fn _get_one_touch_drag_pos(&mut self) -> Option<Vec2> {
         if self.touches.any_just_released() {
             *self.last_touch_1 = None;
         }
@@ -178,5 +178,10 @@ impl<'w, 's> TouchInputs<'w, 's> {
         }
 
         Some(current)
+    }
+
+    pub fn clear_last_touches(&mut self) {
+        *self.last_touch_1 = None;
+        *self.last_touch_2 = None;
     }
 }

@@ -1,4 +1,11 @@
-use bevy::prelude::*;
+use bevy::{
+    picking::{
+        backend::ray::{RayId, RayMap},
+        pointer::PointerId,
+    },
+    prelude::*,
+    utils::HashMap,
+};
 use bevy_window::{PrimaryWindow, SystemCursorIcon, Window};
 use bevy_winit::cursor::CursorIcon;
 
@@ -16,15 +23,15 @@ impl Plugin for MouseController {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (zoom_orbit_camera, pan_rotate_orbit_camera, grab_pan)
+            (zoom_orbit_camera, rotate_orbit_camera, grab_pan)
                 .chain()
                 .in_set(CameraChange::Before),
         );
     }
 }
 
-/// Handles the panning of the camera
-fn pan_rotate_orbit_camera(
+/// Handles the rotation of the camera
+fn rotate_orbit_camera(
     settings: Res<CameraControllerSettings>,
     camstate: Res<State<CameraProjectionState>>,
     mut camera_writer: EventWriter<ControlEvent>,
@@ -101,53 +108,24 @@ fn zoom_orbit_camera(
 
 fn grab_pan(
     mut commands: Commands,
-    mut cam_q: Query<(
-        &GlobalTransform,
-        &LookTransform,
-        &Camera,
-        &mut Smoother,
-        &CameraController,
-    )>,
+    mut cam_q: Query<(Entity, &LookTransform, &mut Smoother, &CameraController), With<Camera>>,
     settings: Res<CameraControllerSettings>,
     inputs: Inputs,
     mut first_ray_hit: Local<Option<Vec3>>,
-    mut primary_window_q: Query<(Entity, Option<&mut CursorIcon>, &Window), With<PrimaryWindow>>,
+    primary_window_q: Single<(Entity, Option<&mut CursorIcon>), With<PrimaryWindow>>,
     mut camera_writer: EventWriter<ControlEvent>,
     mut saved_smoother_weight: Local<f32>,
+    ray_map: Res<RayMap>,
 ) {
-    let Ok((camera_gt, look_transform, camera, mut smoother, controller)) = cam_q.get_single_mut()
+    let Ok((camera_entity, look_transform, mut smoother, controller)) = cam_q.get_single_mut()
     else {
         return;
     };
-    let (window_entity, mut cursor_icon, primary_window) = primary_window_q.single_mut();
+    let (window_entity, mut cursor_icon) = primary_window_q.into_inner();
     let drag_buttons = &settings.buttons.pan;
 
-    if inputs.multi_just_pressed(drag_buttons) {
-        if let Some(mouse_pos) = primary_window.cursor_position() {
-            if let Ok(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window) {
-                let Some(target_distance) = ray.intersect_plane(
-                    Vec3::Y * controller.grab_height,
-                    InfinitePlane3d { normal: Dir3::Y },
-                ) else {
-                    warn!("Grab pan intersection did not intersect with Grab plane");
-                    return;
-                };
-
-                if let Some(icon) = cursor_icon.as_mut() {
-                    icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Grabbing));
-                } else if let Some(mut ecmd) = commands.get_entity(window_entity) {
-                    ecmd.insert(CursorIcon::System(SystemCursorIcon::Grabbing));
-                }
-
-                *saved_smoother_weight = smoother.lag_weight;
-                smoother.lag_weight = 0.1;
-
-                *first_ray_hit = Some(ray.get_point(target_distance));
-            }
-        }
-    }
-
     if inputs.multi_just_released(drag_buttons) {
+        info!("Mouse grab pan stopped");
         smoother.lag_weight = *saved_smoother_weight;
         *first_ray_hit = None;
         if let Some(icon) = cursor_icon.as_mut() {
@@ -155,34 +133,72 @@ fn grab_pan(
         }
     }
 
+    if inputs.multi_just_pressed(drag_buttons) {
+        info!("Mouse grab pan started");
+
+        if let Some(intersection_point) =
+            get_plane_intersection_point(controller, ray_map.map(), camera_entity)
+        {
+            if let Some(icon) = cursor_icon.as_mut() {
+                icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Grabbing));
+            } else if let Some(mut ecmd) = commands.get_entity(window_entity) {
+                ecmd.insert(CursorIcon::System(SystemCursorIcon::Grabbing));
+            }
+
+            *saved_smoother_weight = smoother.lag_weight;
+            smoother.lag_weight = 0.1;
+
+            *first_ray_hit = Some(intersection_point);
+        }
+    }
+
     if inputs.multi_pressed(drag_buttons) {
-        let Some(first_hit) = *first_ray_hit else {
+        let (Some(first_hit), Some(intersection_point)) = (
+            *first_ray_hit,
+            get_plane_intersection_point(controller, ray_map.map(), camera_entity),
+        ) else {
             //Grab pan pressed without first ray hit, return
             return;
         };
 
-        if let Some(mouse_pos) = primary_window.cursor_position() {
-            if let Ok(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, primary_window) {
-                let Some(target_distance) = ray.intersect_plane(
-                    Vec3::Y * controller.grab_height,
-                    InfinitePlane3d { normal: Dir3::Y },
-                ) else {
-                    warn!("Grab pan intersection did not intersect with Grab plane");
-                    return;
-                };
-                let new_hit = ray.get_point(target_distance);
+        // Compensate for look transform smoothing to prevent jittering
+        let smoothing_target_diff = if let Some(smoothing_transform) = smoother.lerp_tfm {
+            look_transform.target - smoothing_transform.target
+        } else {
+            Vec3::ZERO
+        };
 
-                // Compensate for look transform smoothing to prevent jittering
-                let smoothing_target_diff = if let Some(smoothing_transform) = smoother.lerp_tfm {
-                    look_transform.target - smoothing_transform.target
-                } else {
-                    Vec3::ZERO
-                };
+        let first_hit_diff = first_hit - intersection_point - smoothing_target_diff;
 
-                let first_hit_diff = first_hit - new_hit - smoothing_target_diff;
-
-                camera_writer.send(ControlEvent::TranslateTarget(first_hit_diff));
-            }
-        }
+        camera_writer.send(ControlEvent::TranslateTarget(first_hit_diff));
     }
+}
+
+fn get_plane_intersection_point(
+    controller: &CameraController,
+    ray_map: &HashMap<RayId, Ray3d>,
+    camera_entity: Entity,
+) -> Option<Vec3> {
+    let ray_id = RayId {
+        camera: camera_entity,
+        pointer: PointerId::Mouse,
+    };
+
+    let Some(ray) = ray_map.get(&ray_id) else {
+        warn!("No Ray3d for mouse pointer!");
+        return None;
+    };
+
+    let intersection_point = ray
+        .intersect_plane(
+            Vec3::Y * controller.grab_height,
+            InfinitePlane3d { normal: Dir3::Y },
+        )
+        .map(|distance: f32| ray.get_point(distance));
+
+    if intersection_point.is_none() {
+        warn!("Mouse Grab pan intersection did not intersect with Grab plane");
+    };
+
+    intersection_point
 }
