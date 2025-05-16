@@ -124,21 +124,28 @@ fn grab_pan(
     let (window_entity, mut cursor_icon) = primary_window_q.into_inner();
     let drag_buttons = &settings.buttons.pan;
 
-    if inputs.multi_just_released(drag_buttons) {
-        info!("Mouse grab pan stopped");
-        smoother.lag_weight = *saved_smoother_weight;
-        *first_ray_hit = None;
-        if let Some(icon) = cursor_icon.as_mut() {
-            icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Default));
-        }
-    }
-
-    if inputs.multi_just_pressed(drag_buttons) {
-        info!("Mouse grab pan started");
-
-        if let Some(intersection_point) =
+    if inputs.multi_pressed(drag_buttons) {
+        let Some(intersection_point) =
             get_plane_intersection_point(controller, ray_map.map(), camera_entity)
-        {
+        else {
+            //Grab pan pressed without first ray hit, return
+            return;
+        };
+
+        if let Some(first_hit) = *first_ray_hit {
+            // Compensate for look transform smoothing to prevent jittering
+            let smoothing_target_diff = if let Some(smoothing_transform) = smoother.lerp_tfm {
+                look_transform.target - smoothing_transform.target
+            } else {
+                Vec3::ZERO
+            };
+
+            let first_hit_diff = first_hit - intersection_point - smoothing_target_diff;
+
+            camera_writer.send(ControlEvent::TranslateTarget(first_hit_diff));
+        } else {
+            info!("Mouse grab pan started");
+
             if let Some(icon) = cursor_icon.as_mut() {
                 icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Grabbing));
             } else if let Some(mut ecmd) = commands.get_entity(window_entity) {
@@ -150,27 +157,13 @@ fn grab_pan(
 
             *first_ray_hit = Some(intersection_point);
         }
-    }
-
-    if inputs.multi_pressed(drag_buttons) {
-        let (Some(first_hit), Some(intersection_point)) = (
-            *first_ray_hit,
-            get_plane_intersection_point(controller, ray_map.map(), camera_entity),
-        ) else {
-            //Grab pan pressed without first ray hit, return
-            return;
-        };
-
-        // Compensate for look transform smoothing to prevent jittering
-        let smoothing_target_diff = if let Some(smoothing_transform) = smoother.lerp_tfm {
-            look_transform.target - smoothing_transform.target
-        } else {
-            Vec3::ZERO
-        };
-
-        let first_hit_diff = first_hit - intersection_point - smoothing_target_diff;
-
-        camera_writer.send(ControlEvent::TranslateTarget(first_hit_diff));
+    } else if first_ray_hit.is_some() {
+        info!("Mouse grab pan stopped");
+        smoother.lag_weight = *saved_smoother_weight;
+        *first_ray_hit = None;
+        if let Some(icon) = cursor_icon.as_mut() {
+            icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Default));
+        }
     }
 }
 

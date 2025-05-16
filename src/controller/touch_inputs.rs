@@ -98,28 +98,6 @@ impl<'w, 's> TouchInputs<'w, 's> {
         })
     }
 
-    pub fn _get_one_touch_drag(&mut self) -> Option<Vec2> {
-        if self.touches.any_just_released() {
-            *self.last_touch_1 = None;
-        }
-
-        if self.touches.iter().count() != 1 {
-            return None;
-        }
-
-        let touch1 = self.touches.iter().last()?;
-        let last = self.last_touch_1.unwrap_or(touch1.position());
-        *self.last_touch_1 = Some(touch1.position());
-
-        let dist = touch1.position() - last;
-
-        if dist.length_squared() < self.touch_settings.drag_threshold {
-            return None;
-        }
-
-        Some(dist)
-    }
-
     /// Can't be used in the same system as [`Self::get_pinch`]
     pub fn get_two_touch_drag(&mut self) -> Option<Vec2> {
         let [(touch1, last_a), (touch2, last_b)] = self.get_two_touches()?;
@@ -138,46 +116,6 @@ impl<'w, 's> TouchInputs<'w, 's> {
         }
 
         Some(avg)
-    }
-
-    pub fn _get_one_touch_just_press(&mut self) -> Option<Vec2> {
-        if self.touches.any_just_released() {
-            *self.last_touch_1 = None;
-        }
-
-        if self.touches.iter().count() != 1 {
-            return None;
-        }
-
-        let touch1 = self.touches.iter_just_pressed().last()?;
-        Some(touch1.position())
-    }
-
-    pub fn _one_just_released(&mut self) -> bool {
-        self.touches.iter_just_released().count() == 1
-    }
-
-    pub fn _get_one_touch_drag_pos(&mut self) -> Option<Vec2> {
-        if self.touches.any_just_released() {
-            *self.last_touch_1 = None;
-        }
-
-        if self.touches.iter().count() != 1 {
-            return None;
-        }
-
-        let touch1 = self.touches.iter().last()?;
-        let current = touch1.position();
-        let last = self.last_touch_1.unwrap_or(current);
-        *self.last_touch_1 = Some(current);
-
-        let dist = current - last;
-
-        if dist.length_squared() < self.touch_settings.drag_threshold {
-            return None;
-        }
-
-        Some(current)
     }
 
     pub fn clear_last_touches(&mut self) {
