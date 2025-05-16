@@ -1,6 +1,6 @@
 [package]
 name = "bevy_map_camera"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 description = "3D Camera Controller for Bevy"
 authors = ["Oscar Rimsby <oscar.rimsby@mobilaris.se>"]
