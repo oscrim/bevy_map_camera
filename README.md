@@ -16,7 +16,6 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
 - Grab pan
   - Configurable height
 - Camera target follows XZ-plane
-- Support for Perspective and Orthographic projection
 - Smoothed movement
 - Customizable keyboard/mouse controls
 - Touch support
@@ -61,8 +60,6 @@ fn setup(
     commands.spawn(MapCamera);
 }
 ```
-
-Check out the [projection example](https://github.com/oscrim/bevy_map_camera/blob/main/examples/projection.rs) to see how to change between Perspective and Orthographic.
 
 ## Compatible Bevy versions
 
