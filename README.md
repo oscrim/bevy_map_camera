@@ -66,9 +66,8 @@ Check out the [projection example](https://github.com/oscrim/bevy_map_camera/blo
 
 ## Compatible Bevy versions
 
-The `main` branch is compatible with the latest Bevy release.
-
 | bevy_map_camera | bevy |
 | :--             | :--  |
+| 0.3             | 0.16 |
 | 0.2             | 0.15 |
 | 0.1             | 0.14 |
