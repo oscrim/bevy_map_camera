@@ -6,13 +6,15 @@ mod touch_inputs;
 
 use std::f32::consts::PI;
 
-use bevy::{prelude::*, render::camera::ViewportConversionError};
+use bevy_app::{App, Plugin, Update};
+use bevy_ecs::prelude::*;
+use bevy_math::{Ray3d, Vec2, Vec3};
+use bevy_reflect::prelude::*;
+use bevy_render::camera::{Camera, ViewportConversionError};
+use bevy_transform::components::GlobalTransform;
 use bevy_window::Window;
 
-use crate::{
-    inputs::InputButton, look_angles::LookAngles, CameraChange, CameraProjectionState,
-    LookTransform,
-};
+use crate::{CameraChange, LookTransform, inputs::InputButton, look_angles::LookAngles};
 
 pub use resources::CameraControllerButtons;
 
@@ -93,6 +95,7 @@ pub struct GrabHeightLens {
 #[cfg(feature = "bevy_tweening")]
 impl bevy_tweening::Lens<CameraController> for GrabHeightLens {
     fn lerp(&mut self, target: &mut dyn bevy_tweening::Targetable<CameraController>, ratio: f32) {
+        use bevy_math::FloatExt;
         target.grab_height = self.start.lerp(self.end, ratio);
     }
 }
@@ -142,11 +145,9 @@ impl Plugin for CameraControllerPlugin {
 }
 
 fn update_height(
-    mut camera: Query<(&mut LookTransform, &CameraController), Changed<CameraController>>,
+    camera: Single<(&mut LookTransform, &CameraController), Changed<CameraController>>,
 ) {
-    let Ok((mut transform, controller)) = camera.get_single_mut() else {
-        return;
-    };
+    let (mut transform, controller) = camera.into_inner();
 
     if !controller.enabled {
         return;
@@ -160,13 +161,10 @@ fn update_height(
 
 fn control_system(
     mut events: EventReader<ControlEvent>,
-    mut camera: Query<(&mut Projection, &mut LookTransform, &CameraController)>,
-    camera_state: Res<State<CameraProjectionState>>,
+    camera: Single<(&mut LookTransform, &CameraController)>,
     settings: Res<CameraControllerSettings>,
 ) {
-    let Ok((mut projection, mut transform, controller)) = camera.get_single_mut() else {
-        return;
-    };
+    let (mut transform, controller) = camera.into_inner();
 
     if !controller.enabled {
         // Read all events to mark them as read
@@ -228,12 +226,6 @@ fn control_system(
 
     // Add one to make sure the eye is inside the grab plane
     transform.eye.y = transform.eye.y.max(controller.grab_height + 1.0);
-
-    if let CameraProjectionState::Orthographic = camera_state.get() {
-        if let Projection::Orthographic(o) = &mut *projection {
-            o.scale *= new_radius / radius;
-        }
-    }
 }
 
 fn ray_from_screenspace(

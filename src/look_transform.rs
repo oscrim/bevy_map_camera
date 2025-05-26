@@ -1,7 +1,7 @@
-use bevy::{
-    ecs::prelude::*, math::prelude::*, prelude::ReflectDefault, reflect::Reflect,
-    transform::components::Transform,
-};
+use bevy_ecs::prelude::*;
+use bevy_math::prelude::*;
+use bevy_reflect::prelude::*;
+use bevy_transform::components::Transform;
 
 #[derive(Bundle, Clone)]
 pub struct LookTransformBundle {
@@ -13,7 +13,7 @@ pub struct LookTransformBundle {
 /// stay in sync.
 #[derive(Component, Debug, PartialEq, Clone, Copy, Reflect)]
 #[reflect(Component, Default, Debug, PartialEq)]
-#[require(Transform(default_transform), Smoother)]
+#[require(Transform = default_transform(), Smoother)]
 pub struct LookTransform {
     pub eye: Vec3,
     pub target: Vec3,

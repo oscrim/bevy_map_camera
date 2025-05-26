@@ -130,11 +130,11 @@ fn setup(
 }
 
 fn update_grab_height(
-    mut controller_query: Query<&mut CameraController>,
+    controller_query: Single<&mut CameraController>,
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
-    let mut controller = controller_query.single_mut();
+    let mut controller = controller_query.into_inner();
     let height_change = 2.0 * time.delta().as_secs_f32();
     if keys.pressed(KeyCode::ArrowUp) {
         controller.grab_height += height_change;
@@ -145,9 +145,9 @@ fn update_grab_height(
 
 fn toggle_height_animation(
     mut commands: Commands,
-    controller_query: Query<(Entity, &CameraController, Has<Animator<CameraController>>)>,
+    controller_query: Single<(Entity, &CameraController, Has<Animator<CameraController>>)>,
 ) {
-    let (entity, controller, animation_runing) = controller_query.single();
+    let (entity, controller, animation_runing) = controller_query.into_inner();
 
     if animation_runing {
         commands
@@ -170,8 +170,8 @@ fn toggle_height_animation(
     commands.entity(entity).insert(Animator::new(tween));
 }
 
-fn draw_plane(mut gizmos: Gizmos, controller_query: Query<&CameraController>) {
-    let translation = Vec3::Y * controller_query.single().grab_height;
+fn draw_plane(mut gizmos: Gizmos, controller_query: Single<&CameraController>) {
+    let translation = Vec3::Y * controller_query.into_inner().grab_height;
 
     let isometry = Isometry3d::new(translation, Quat::from_axis_angle(Vec3::X, PI / 2.0));
 

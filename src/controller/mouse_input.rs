@@ -1,9 +1,9 @@
 use std::ops::Deref;
 
 use crate::inputs::{InputButton, Inputs};
-use bevy::input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
-use bevy::prelude::EventReader;
-use bevy::{ecs::system::SystemParam, prelude::Vec2};
+use bevy_ecs::{prelude::*, system::SystemParam};
+use bevy_input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel};
+use bevy_math::Vec2;
 
 #[derive(SystemParam)]
 pub(super) struct MouseKeyboardInputs<'w, 's> {

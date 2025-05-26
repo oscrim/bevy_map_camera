@@ -1,5 +1,5 @@
 use approx::relative_eq;
-use bevy::math::prelude::*;
+use bevy_math::prelude::*;
 
 const PI: f32 = std::f32::consts::PI;
 

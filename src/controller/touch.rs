@@ -1,20 +1,24 @@
-use super::{ray_from_screenspace, CameraController};
-use crate::{look_transform::Smoother, CameraProjectionState};
-use bevy::{
-    picking::{
-        backend::ray::{RayId, RayMap},
-        pointer::PointerId,
-    },
-    prelude::*,
-    utils::HashMap,
+use super::{CameraController, ray_from_screenspace};
+use crate::look_transform::Smoother;
+use bevy_app::{App, Plugin, Update};
+use bevy_ecs::prelude::*;
+use bevy_input::touch::Touches;
+use bevy_log::{error, info, warn};
+use bevy_math::{Dir3, Ray3d, Vec2, Vec3, primitives::InfinitePlane3d};
+use bevy_picking::{
+    backend::ray::{RayId, RayMap},
+    pointer::PointerId,
 };
+use bevy_platform::collections::HashMap;
+use bevy_render::camera::Camera;
+use bevy_transform::components::GlobalTransform;
 use bevy_window::{PrimaryWindow, Window};
 
 use crate::{CameraChange, LookTransform};
 
 use super::{
-    touch_inputs::{Pinch, TouchInputSettings, TouchInputs},
     CameraControllerSettings, ControlEvent,
+    touch_inputs::{Pinch, TouchInputSettings, TouchInputs},
 };
 
 pub(super) struct TouchInputPlugin;
@@ -25,12 +29,7 @@ impl Plugin for TouchInputPlugin {
         app.init_resource::<TouchInputSettings>();
         app.add_systems(
             Update,
-            (
-                zoom_orbit_camera,
-                grab_pan,
-                rotate_orbit_camera.run_if(in_state(CameraProjectionState::Perspective)),
-            )
-                .in_set(CameraChange::Before),
+            (zoom_orbit_camera, grab_pan, rotate_orbit_camera).in_set(CameraChange::Before),
         );
     }
 }
@@ -38,8 +37,8 @@ impl Plugin for TouchInputPlugin {
 /// Handles the zooming of the orbital camera
 fn zoom_orbit_camera(
     mut touches: TouchInputs,
-    query: Query<(&Camera, &GlobalTransform, &LookTransform, &CameraController)>,
-    main_window: Query<&Window, With<PrimaryWindow>>,
+    cam_q: Single<(&Camera, &GlobalTransform, &LookTransform, &CameraController)>,
+    main_window: Single<&Window, With<PrimaryWindow>>,
     settings: Res<CameraControllerSettings>,
     mut camera_writer: EventWriter<ControlEvent>,
 ) {
@@ -52,10 +51,8 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let Ok((camera, camera_gt, camera_lt, controller)) = query.get_single() else {
-        return;
-    };
-    let window = main_window.single();
+    let (camera, camera_gt, camera_lt, controller) = cam_q.into_inner();
+    let window = main_window.into_inner();
 
     let scalar = 1.0 - distance_delta * settings.touch_zoom_sensitivity_modifier;
 
@@ -64,7 +61,7 @@ fn zoom_orbit_camera(
     }
 
     let Ok(ray) = ray_from_screenspace(middle, camera, camera_gt, window) else {
-        camera_writer.send(ControlEvent::Zoom {
+        camera_writer.write(ControlEvent::Zoom {
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
         });
@@ -82,7 +79,7 @@ fn zoom_orbit_camera(
 
     let target = ray.get_point(target_distance);
 
-    camera_writer.send(ControlEvent::Zoom {
+    camera_writer.write(ControlEvent::Zoom {
         zoom_scalar: scalar,
         zoom_target: target,
     });
@@ -97,13 +94,13 @@ fn rotate_orbit_camera(
     let Some(rotation_move) = touches.get_two_touch_drag() else {
         return;
     };
-    camera_writer.send(ControlEvent::Orbit(
+    camera_writer.write(ControlEvent::Orbit(
         rotation_move * settings.touch_rotation_sensitivity_modifier,
     ));
 }
 
 fn grab_pan(
-    mut cam_q: Query<(Entity, &LookTransform, &mut Smoother, &CameraController), With<Camera>>,
+    cam_q: Single<(Entity, &LookTransform, &mut Smoother, &CameraController), With<Camera>>,
     mut inputs: TouchInputs,
     touches: Res<Touches>,
     mut first_ray_hit: Local<Option<Vec3>>,
@@ -113,12 +110,9 @@ fn grab_pan(
     mut first_screen_touch: Local<Option<Vec2>>,
     ray_map: Res<RayMap>,
 ) {
-    let Ok((camera_entity, look_transform, mut smoother, controller)) = cam_q.get_single_mut()
-    else {
-        return;
-    };
+    let (camera_entity, look_transform, mut smoother, controller) = cam_q.into_inner();
 
-    let intersection = get_plane_intersection_point(controller, ray_map.map(), camera_entity).map(
+    let intersection = get_plane_intersection_point(controller, &ray_map.map, camera_entity).map(
         |(pointer_id, point)| {
             (
                 pointer_id
@@ -177,7 +171,7 @@ fn grab_pan(
 
         if touch_pos.distance(screen_touch) > 3.0 || *over_threshold {
             *over_threshold = true;
-            camera_writer.send(ControlEvent::TranslateTarget(first_hit_diff));
+            camera_writer.write(ControlEvent::TranslateTarget(first_hit_diff));
         }
     }
 }

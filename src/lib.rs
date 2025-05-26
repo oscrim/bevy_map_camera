@@ -1,14 +1,16 @@
 #![doc = include_str!("../README.md")]
 
-use bevy::prelude::*;
-
 pub mod controller;
 pub mod inputs;
 pub mod look_angles;
 pub mod look_transform;
-pub mod projection;
 
+use bevy_app::prelude::*;
+use bevy_core_pipeline::prelude::*;
+use bevy_ecs::prelude::*;
 use bevy_input::InputSystem;
+use bevy_render::prelude::*;
+use bevy_transform::components::Transform;
 
 // re-exports
 pub use controller::{CameraController, CameraControllerSettings};
@@ -37,13 +39,8 @@ impl Plugin for MapCameraPlugin {
                 .before(CameraChange::After),
         );
 
-        app.init_state::<CameraProjectionState>();
-
         // logic for camera input (buttons and inputdevices)
-        app.add_plugins((
-            controller::CameraControllerPlugin,
-            projection::ChangeProjectionPlugin,
-        ));
+        app.add_plugins(controller::CameraControllerPlugin);
 
         #[cfg(feature = "bevy_easings")]
         app.add_systems(
@@ -79,7 +76,7 @@ fn look_transform_system(
 }
 
 #[derive(Component)]
-#[require(CameraController, Camera3d, LookTransform, Camera(default_camera))]
+#[require(CameraController, Camera3d, LookTransform, Camera = default_camera())]
 pub struct MapCamera;
 
 fn default_camera() -> Camera {
@@ -95,11 +92,4 @@ pub enum CameraChange {
     Before,
     /// Systems that should run after any changes to the camera transform are made
     After,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Default, States)]
-pub enum CameraProjectionState {
-    #[default]
-    Perspective,
-    Orthographic,
 }

@@ -1,5 +1,6 @@
 use crate::inputs::InputButton;
-use bevy::prelude::*;
+use bevy_input::{keyboard::KeyCode, mouse::MouseButton};
+use bevy_reflect::Reflect;
 
 #[derive(Clone, Reflect)]
 pub struct CameraControllerButtons {

@@ -1,16 +1,13 @@
 use std::marker::PhantomData;
 
-use bevy::prelude::Reflect;
-use bevy::{
-    ecs::system::SystemParam,
-    prelude::{ButtonInput, KeyCode, MouseButton, Res},
-};
+use bevy_ecs::system::{Res, SystemParam};
+use bevy_input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton};
+use bevy_reflect::Reflect;
 
 #[derive(SystemParam)]
 pub(crate) struct Inputs<'w, 's> {
     pub keys: Res<'w, ButtonInput<KeyCode>>,
     pub mouse: Res<'w, ButtonInput<MouseButton>>,
-    #[system_param(ignore)]
     marker: PhantomData<&'s ()>,
 }
 

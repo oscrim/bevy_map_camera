@@ -1,21 +1,24 @@
-use bevy::{
-    picking::{
-        backend::ray::{RayId, RayMap},
-        pointer::PointerId,
-    },
-    prelude::*,
-    utils::HashMap,
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_log::{info, warn};
+use bevy_math::{Dir3, Ray3d, Vec3, primitives::InfinitePlane3d};
+use bevy_picking::{
+    backend::ray::{RayId, RayMap},
+    pointer::PointerId,
 };
+use bevy_platform::collections::HashMap;
+use bevy_render::camera::Camera;
+use bevy_transform::components::GlobalTransform;
 use bevy_window::{PrimaryWindow, SystemCursorIcon, Window};
 use bevy_winit::cursor::CursorIcon;
 
 use super::ray_from_screenspace;
-use crate::{look_transform::Smoother, CameraProjectionState};
+use crate::look_transform::Smoother;
 
 use super::{
-    mouse_input::MouseKeyboardInputs, CameraController, CameraControllerSettings, ControlEvent,
+    CameraController, CameraControllerSettings, ControlEvent, mouse_input::MouseKeyboardInputs,
 };
-use crate::{inputs::Inputs, CameraChange, LookTransform};
+use crate::{CameraChange, LookTransform, inputs::Inputs};
 
 pub(super) struct MouseController;
 
@@ -33,38 +36,38 @@ impl Plugin for MouseController {
 /// Handles the rotation of the camera
 fn rotate_orbit_camera(
     settings: Res<CameraControllerSettings>,
-    camstate: Res<State<CameraProjectionState>>,
     mut camera_writer: EventWriter<ControlEvent>,
     mut mouse_inputs: MouseKeyboardInputs,
 ) {
-    let mut rotation_move = mouse_inputs.mouse_drag(&settings.buttons.rotate);
+    let Some(rotation_move) = mouse_inputs
+        .mouse_drag(&settings.buttons.rotate)
+        .or_else(|| {
+            settings
+                .buttons
+                .rotate_alt
+                .as_ref()
+                .map(|alt| mouse_inputs.mouse_drag(alt))
+                .flatten()
+        })
+    else {
+        return;
+    };
 
-    if let (Some(alt), true) = (&settings.buttons.rotate_alt, rotation_move.is_none()) {
-        rotation_move = mouse_inputs.mouse_drag(alt);
-    }
-
-    // only rotate in perspective state
-    if let (Some(rotation_move), CameraProjectionState::Perspective) =
-        (rotation_move, *camstate.get())
-    {
-        camera_writer.send(ControlEvent::Orbit(
-            rotation_move * settings.mouse_rotation_sensitivity_modifier,
-        ));
-    }
+    camera_writer.write(ControlEvent::Orbit(
+        rotation_move * settings.mouse_rotation_sensitivity_modifier,
+    ));
 }
 
 /// Handles the zooming of the orbital camera
 fn zoom_orbit_camera(
-    query: Query<(&CameraController, &Camera, &GlobalTransform, &LookTransform)>,
+    cam_q: Single<(&CameraController, &Camera, &GlobalTransform, &LookTransform)>,
     settings: Res<CameraControllerSettings>,
-    main_window: Query<&Window, With<PrimaryWindow>>,
+    main_window: Single<&Window, With<PrimaryWindow>>,
     mut mouse_inputs: MouseKeyboardInputs,
     mut camera_writer: EventWriter<ControlEvent>,
 ) {
-    let Ok((controller, camera, camera_gt, camera_lt)) = query.get_single() else {
-        return;
-    };
-    let window = main_window.single();
+    let (controller, camera, camera_gt, camera_lt) = cam_q.into_inner();
+    let window = main_window.into_inner();
 
     let scroll_sensitivity = settings.mouse_zoom_sensitivity_modifier;
 
@@ -74,7 +77,7 @@ fn zoom_orbit_camera(
     };
 
     let Some(mouse_pos) = window.cursor_position() else {
-        camera_writer.send(ControlEvent::Zoom {
+        camera_writer.write(ControlEvent::Zoom {
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
         });
@@ -83,7 +86,7 @@ fn zoom_orbit_camera(
     };
 
     let Ok(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, window) else {
-        camera_writer.send(ControlEvent::Zoom {
+        camera_writer.write(ControlEvent::Zoom {
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
         });
@@ -100,7 +103,7 @@ fn zoom_orbit_camera(
 
     let target = ray.get_point(target_distance);
 
-    camera_writer.send(ControlEvent::Zoom {
+    camera_writer.write(ControlEvent::Zoom {
         zoom_scalar: scalar,
         zoom_target: target,
     });
@@ -108,25 +111,22 @@ fn zoom_orbit_camera(
 
 fn grab_pan(
     mut commands: Commands,
-    mut cam_q: Query<(Entity, &LookTransform, &mut Smoother, &CameraController), With<Camera>>,
+    cam_q: Single<(Entity, &LookTransform, &mut Smoother, &CameraController), With<Camera>>,
     settings: Res<CameraControllerSettings>,
     inputs: Inputs,
     mut first_ray_hit: Local<Option<Vec3>>,
-    primary_window_q: Single<(Entity, Option<&mut CursorIcon>), With<PrimaryWindow>>,
+    primary_window_q: Single<Entity, With<PrimaryWindow>>,
     mut camera_writer: EventWriter<ControlEvent>,
     mut saved_smoother_weight: Local<f32>,
     ray_map: Res<RayMap>,
 ) {
-    let Ok((camera_entity, look_transform, mut smoother, controller)) = cam_q.get_single_mut()
-    else {
-        return;
-    };
-    let (window_entity, mut cursor_icon) = primary_window_q.into_inner();
+    let (camera_entity, look_transform, mut smoother, controller) = cam_q.into_inner();
+    let window_entity = primary_window_q.into_inner();
     let drag_buttons = &settings.buttons.pan;
 
     if inputs.multi_pressed(drag_buttons) {
         let Some(intersection_point) =
-            get_plane_intersection_point(controller, ray_map.map(), camera_entity)
+            get_plane_intersection_point(controller, &ray_map.map, camera_entity)
         else {
             //Grab pan pressed without first ray hit, return
             return;
@@ -142,14 +142,16 @@ fn grab_pan(
 
             let first_hit_diff = first_hit - intersection_point - smoothing_target_diff;
 
-            camera_writer.send(ControlEvent::TranslateTarget(first_hit_diff));
+            camera_writer.write(ControlEvent::TranslateTarget(first_hit_diff));
         } else {
             info!("Mouse grab pan started");
 
-            if let Some(icon) = cursor_icon.as_mut() {
-                icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Grabbing));
-            } else if let Some(mut ecmd) = commands.get_entity(window_entity) {
-                ecmd.insert(CursorIcon::System(SystemCursorIcon::Grabbing));
+            if let Ok(mut ecmd) = commands.get_entity(window_entity) {
+                ecmd.entry::<CursorIcon>()
+                    .and_modify(|mut icon| {
+                        icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Grabbing));
+                    })
+                    .or_insert(CursorIcon::System(SystemCursorIcon::Grabbing));
             }
 
             *saved_smoother_weight = smoother.lag_weight;
@@ -161,8 +163,10 @@ fn grab_pan(
         info!("Mouse grab pan stopped");
         smoother.lag_weight = *saved_smoother_weight;
         *first_ray_hit = None;
-        if let Some(icon) = cursor_icon.as_mut() {
-            icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Default));
+        if let Ok(mut ecmd) = commands.get_entity(window_entity) {
+            ecmd.entry::<CursorIcon>().and_modify(|mut icon| {
+                icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Default));
+            });
         }
     }
 }

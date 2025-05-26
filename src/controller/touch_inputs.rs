@@ -1,6 +1,8 @@
-use bevy::ecs::system::SystemParam;
-use bevy::input::touch::Touch;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_ecs::{reflect::ReflectResource, system::SystemParam};
+use bevy_input::touch::{Touch, Touches};
+use bevy_math::Vec2;
+use bevy_reflect::Reflect;
 
 #[derive(Resource, Clone, Copy, Reflect)]
 #[reflect(Resource)]
