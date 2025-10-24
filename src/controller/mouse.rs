@@ -1,4 +1,5 @@
 use bevy_app::prelude::*;
+use bevy_camera::Camera;
 use bevy_ecs::prelude::*;
 use bevy_log::{info, warn};
 use bevy_math::{Dir3, Ray3d, Vec3, primitives::InfinitePlane3d};
@@ -7,16 +8,14 @@ use bevy_picking::{
     pointer::PointerId,
 };
 use bevy_platform::collections::HashMap;
-use bevy_render::camera::Camera;
 use bevy_transform::components::GlobalTransform;
-use bevy_window::{PrimaryWindow, SystemCursorIcon, Window};
-use bevy_winit::cursor::CursorIcon;
+use bevy_window::{CursorIcon, PrimaryWindow, SystemCursorIcon, Window};
 
 use super::ray_from_screenspace;
 use crate::look_transform::Smoother;
 
 use super::{
-    CameraController, CameraControllerSettings, ControlEvent, mouse_input::MouseKeyboardInputs,
+    CameraController, CameraControllerSettings, ControlMessage, mouse_input::MouseKeyboardInputs,
 };
 use crate::{CameraChange, LookTransform, inputs::Inputs};
 
@@ -36,7 +35,7 @@ impl Plugin for MouseController {
 /// Handles the rotation of the camera
 fn rotate_orbit_camera(
     settings: Res<CameraControllerSettings>,
-    mut camera_writer: EventWriter<ControlEvent>,
+    mut camera_writer: MessageWriter<ControlMessage>,
     mut mouse_inputs: MouseKeyboardInputs,
 ) {
     let Some(rotation_move) = mouse_inputs
@@ -53,7 +52,7 @@ fn rotate_orbit_camera(
         return;
     };
 
-    camera_writer.write(ControlEvent::Orbit(
+    camera_writer.write(ControlMessage::Orbit(
         rotation_move * settings.mouse_rotation_sensitivity_modifier,
     ));
 }
@@ -64,7 +63,7 @@ fn zoom_orbit_camera(
     settings: Res<CameraControllerSettings>,
     main_window: Single<&Window, With<PrimaryWindow>>,
     mut mouse_inputs: MouseKeyboardInputs,
-    mut camera_writer: EventWriter<ControlEvent>,
+    mut camera_writer: MessageWriter<ControlMessage>,
 ) {
     let (controller, camera, camera_gt, camera_lt) = cam_q.into_inner();
     let window = main_window.into_inner();
@@ -77,7 +76,7 @@ fn zoom_orbit_camera(
     };
 
     let Some(mouse_pos) = window.cursor_position() else {
-        camera_writer.write(ControlEvent::Zoom {
+        camera_writer.write(ControlMessage::Zoom {
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
         });
@@ -86,7 +85,7 @@ fn zoom_orbit_camera(
     };
 
     let Ok(ray) = ray_from_screenspace(mouse_pos, camera, camera_gt, window) else {
-        camera_writer.write(ControlEvent::Zoom {
+        camera_writer.write(ControlMessage::Zoom {
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
         });
@@ -103,7 +102,7 @@ fn zoom_orbit_camera(
 
     let target = ray.get_point(target_distance);
 
-    camera_writer.write(ControlEvent::Zoom {
+    camera_writer.write(ControlMessage::Zoom {
         zoom_scalar: scalar,
         zoom_target: target,
     });
@@ -116,7 +115,7 @@ fn grab_pan(
     inputs: Inputs,
     mut first_ray_hit: Local<Option<Vec3>>,
     primary_window_q: Single<Entity, With<PrimaryWindow>>,
-    mut camera_writer: EventWriter<ControlEvent>,
+    mut camera_writer: MessageWriter<ControlMessage>,
     mut saved_smoother_weight: Local<f32>,
     ray_map: Res<RayMap>,
 ) {
@@ -142,10 +141,8 @@ fn grab_pan(
 
             let first_hit_diff = first_hit - intersection_point - smoothing_target_diff;
 
-            camera_writer.write(ControlEvent::TranslateTarget(first_hit_diff));
+            camera_writer.write(ControlMessage::TranslateTarget(first_hit_diff));
         } else {
-            info!("Mouse grab pan started");
-
             if let Ok(mut ecmd) = commands.get_entity(window_entity) {
                 ecmd.entry::<CursorIcon>()
                     .and_modify(|mut icon| {

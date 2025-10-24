@@ -139,7 +139,7 @@ pub struct LookTransformLens {
 
 #[cfg(feature = "bevy_tweening")]
 impl bevy_tweening::Lens<LookTransform> for LookTransformLens {
-    fn lerp(&mut self, target: &mut dyn bevy_tweening::Targetable<LookTransform>, ratio: f32) {
+    fn lerp(&mut self, mut target: Mut<LookTransform>, ratio: f32) {
         target.eye = self.start.eye.lerp(self.end.eye, ratio);
         target.target = self.start.target.lerp(self.end.target, ratio);
         target.up = self.start.up.lerp(self.end.up, ratio);

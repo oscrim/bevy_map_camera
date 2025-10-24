@@ -6,10 +6,9 @@ pub mod look_angles;
 pub mod look_transform;
 
 use bevy_app::prelude::*;
-use bevy_core_pipeline::prelude::*;
+use bevy_camera::{Camera, Camera3d};
 use bevy_ecs::prelude::*;
-use bevy_input::InputSystem;
-use bevy_render::prelude::*;
+use bevy_input::InputSystems;
 use bevy_transform::components::Transform;
 
 // re-exports
@@ -29,7 +28,7 @@ impl Plugin for MapCameraPlugin {
             Update,
             (CameraChange::Before, CameraChange::After)
                 .chain()
-                .after(InputSystem),
+                .after(InputSystems),
         );
 
         app.add_systems(
@@ -48,16 +47,8 @@ impl Plugin for MapCameraPlugin {
             bevy_easings::custom_ease_system::<(), LookTransform>.in_set(CameraChange::Before),
         );
         #[cfg(feature = "bevy_tweening")]
-        {
-            if !app.is_plugin_added::<bevy_tweening::TweeningPlugin>() {
-                app.add_plugins(bevy_tweening::TweeningPlugin);
-            }
-            app.add_systems(
-                Update,
-                bevy_tweening::component_animator_system::<LookTransform>
-                    .in_set(CameraChange::Before)
-                    .in_set(bevy_tweening::AnimationSystem::AnimationUpdate),
-            );
+        if !app.is_plugin_added::<bevy_tweening::TweeningPlugin>() {
+            app.add_plugins(bevy_tweening::TweeningPlugin);
         }
     }
 }

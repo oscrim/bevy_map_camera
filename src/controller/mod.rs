@@ -7,10 +7,10 @@ mod touch_inputs;
 use std::f32::consts::PI;
 
 use bevy_app::{App, Plugin, Update};
+use bevy_camera::{Camera, ViewportConversionError};
 use bevy_ecs::prelude::*;
 use bevy_math::{Ray3d, Vec2, Vec3};
 use bevy_reflect::prelude::*;
-use bevy_render::camera::{Camera, ViewportConversionError};
 use bevy_transform::components::GlobalTransform;
 use bevy_window::Window;
 
@@ -94,14 +94,14 @@ pub struct GrabHeightLens {
 
 #[cfg(feature = "bevy_tweening")]
 impl bevy_tweening::Lens<CameraController> for GrabHeightLens {
-    fn lerp(&mut self, target: &mut dyn bevy_tweening::Targetable<CameraController>, ratio: f32) {
+    fn lerp(&mut self, mut target: Mut<CameraController>, ratio: f32) {
         use bevy_math::FloatExt;
         target.grab_height = self.start.lerp(self.end, ratio);
     }
 }
 
-#[derive(Event)]
-pub enum ControlEvent {
+#[derive(Message)]
+pub enum ControlMessage {
     Orbit(Vec2),
     /// Translation Delta
     TranslateTarget(Vec3),
@@ -119,7 +119,7 @@ impl Plugin for CameraControllerPlugin {
         app.register_type::<CameraControllerSettings>();
         app.init_resource::<CameraControllerSettings>();
 
-        app.add_event::<ControlEvent>();
+        app.add_message::<ControlMessage>();
 
         app.add_plugins(mouse::MouseController);
         app.add_plugins(touch::TouchInputPlugin);
@@ -127,19 +127,12 @@ impl Plugin for CameraControllerPlugin {
         app.add_systems(
             Update,
             (
-                control_system.run_if(on_event::<ControlEvent>),
+                control_system.run_if(on_message::<ControlMessage>),
                 update_height,
             )
                 .chain()
                 .after(CameraChange::Before)
                 .before(super::look_transform_system),
-        );
-
-        #[cfg(feature = "bevy_tweening")]
-        app.add_systems(
-            Update,
-            bevy_tweening::component_animator_system::<CameraController>
-                .in_set(CameraChange::Before),
         );
     }
 }
@@ -160,7 +153,7 @@ fn update_height(
 }
 
 fn control_system(
-    mut events: EventReader<ControlEvent>,
+    mut events: MessageReader<ControlMessage>,
     camera: Single<(&mut LookTransform, &CameraController)>,
     settings: Res<CameraControllerSettings>,
 ) {
@@ -183,7 +176,7 @@ fn control_system(
 
     for event in events.read() {
         match event {
-            ControlEvent::Orbit(delta) => {
+            ControlMessage::Orbit(delta) => {
                 look_angles.add_yaw(-delta.x);
                 look_angles.add_pitch(delta.y);
 
@@ -191,10 +184,10 @@ fn control_system(
                     look_angles.set_pitch(settings.minimum_pitch)
                 }
             }
-            ControlEvent::TranslateTarget(delta) => {
+            ControlMessage::TranslateTarget(delta) => {
                 transform.target += *delta;
             }
-            ControlEvent::Zoom {
+            ControlMessage::Zoom {
                 zoom_scalar,
                 zoom_target,
             } => {

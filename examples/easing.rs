@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bevy::color::palettes::css::{DARK_GREEN, TAN};
-use bevy::core_pipeline::auto_exposure::AutoExposurePlugin;
+use bevy::post_process::auto_exposure::AutoExposurePlugin;
 use bevy::prelude::*;
 
 use bevy_easings::{CustomComponentEase, EaseMethod};

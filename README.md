@@ -22,9 +22,9 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
   - One finger pan
   - Two finger rotate
   - Pinch to zoom
-- Supports Easing though [`bevy_easings`](https://github.com/vleue/bevy_easings), part of `default` features.
+- Supports Easing though [`bevy_easings`](https://github.com/vleue/bevy_easings), requires `easings` feature.
   - Implemented for `LookTransform`
-- Supports Tweening through [`bevy_tweening`](https://github.com/djeedai/bevy_tweening), requires `bevy_tweening` feature.
+- Supports Tweening through [`bevy_tweening`](https://github.com/djeedai/bevy_tweening), requires `tweening` feature.
   - Lenses
     - `LookTransformLens`
     - `GrabHeightLens`
@@ -65,6 +65,7 @@ fn setup(
 
 | bevy_map_camera | bevy |
 | :--             | :--  |
+| 0.4             | 0.17 |
 | 0.3             | 0.16 |
 | 0.2             | 0.15 |
 | 0.1             | 0.14 |

@@ -1,12 +1,12 @@
 use std::time::Duration;
 
 use bevy::color::palettes::css::{DARK_GREEN, TAN};
-use bevy::core_pipeline::auto_exposure::AutoExposurePlugin;
+use bevy::post_process::auto_exposure::AutoExposurePlugin;
 use bevy::prelude::*;
 
 use bevy_map_camera::look_transform::LookTransformLens;
 use bevy_map_camera::{LookTransform, MapCamera, MapCameraPlugin};
-use bevy_tweening::{Animator, EaseMethod, RepeatCount, RepeatStrategy, Tween};
+use bevy_tweening::{EaseMethod, RepeatCount, RepeatStrategy, Tween, TweenAnim};
 
 fn main() {
     let mut app = App::new();
@@ -81,5 +81,8 @@ fn setup(
     .with_repeat_strategy(RepeatStrategy::MirroredRepeat)
     .with_repeat_count(RepeatCount::Infinite);
 
-    commands.spawn((MapCamera, Animator::new(tween)));
+    commands.spawn((
+        MapCamera,
+        TweenAnim::new(tween).with_destroy_on_completed(false),
+    ));
 }

@@ -1,6 +1,7 @@
 use super::{CameraController, ray_from_screenspace};
 use crate::look_transform::Smoother;
 use bevy_app::{App, Plugin, Update};
+use bevy_camera::Camera;
 use bevy_ecs::prelude::*;
 use bevy_input::touch::Touches;
 use bevy_log::{error, info, warn};
@@ -10,14 +11,13 @@ use bevy_picking::{
     pointer::PointerId,
 };
 use bevy_platform::collections::HashMap;
-use bevy_render::camera::Camera;
 use bevy_transform::components::GlobalTransform;
 use bevy_window::{PrimaryWindow, Window};
 
 use crate::{CameraChange, LookTransform};
 
 use super::{
-    CameraControllerSettings, ControlEvent,
+    CameraControllerSettings, ControlMessage,
     touch_inputs::{Pinch, TouchInputSettings, TouchInputs},
 };
 
@@ -40,7 +40,7 @@ fn zoom_orbit_camera(
     cam_q: Single<(&Camera, &GlobalTransform, &LookTransform, &CameraController)>,
     main_window: Single<&Window, With<PrimaryWindow>>,
     settings: Res<CameraControllerSettings>,
-    mut camera_writer: EventWriter<ControlEvent>,
+    mut camera_writer: MessageWriter<ControlMessage>,
 ) {
     // Get the deltas of the two touches
     let Some(Pinch {
@@ -61,7 +61,7 @@ fn zoom_orbit_camera(
     }
 
     let Ok(ray) = ray_from_screenspace(middle, camera, camera_gt, window) else {
-        camera_writer.write(ControlEvent::Zoom {
+        camera_writer.write(ControlMessage::Zoom {
             zoom_scalar: scalar,
             zoom_target: camera_lt.target,
         });
@@ -79,7 +79,7 @@ fn zoom_orbit_camera(
 
     let target = ray.get_point(target_distance);
 
-    camera_writer.write(ControlEvent::Zoom {
+    camera_writer.write(ControlMessage::Zoom {
         zoom_scalar: scalar,
         zoom_target: target,
     });
@@ -89,12 +89,12 @@ fn zoom_orbit_camera(
 fn rotate_orbit_camera(
     mut touches: TouchInputs,
     settings: Res<CameraControllerSettings>,
-    mut camera_writer: EventWriter<ControlEvent>,
+    mut camera_writer: MessageWriter<ControlMessage>,
 ) {
     let Some(rotation_move) = touches.get_two_touch_drag() else {
         return;
     };
-    camera_writer.write(ControlEvent::Orbit(
+    camera_writer.write(ControlMessage::Orbit(
         rotation_move * settings.touch_rotation_sensitivity_modifier,
     ));
 }
@@ -104,7 +104,7 @@ fn grab_pan(
     mut inputs: TouchInputs,
     touches: Res<Touches>,
     mut first_ray_hit: Local<Option<Vec3>>,
-    mut camera_writer: EventWriter<ControlEvent>,
+    mut camera_writer: MessageWriter<ControlMessage>,
     mut saved_smoother_weight: Local<f32>,
     mut over_threshold: Local<bool>,
     mut first_screen_touch: Local<Option<Vec2>>,
@@ -171,7 +171,7 @@ fn grab_pan(
 
         if touch_pos.distance(screen_touch) > 3.0 || *over_threshold {
             *over_threshold = true;
-            camera_writer.write(ControlEvent::TranslateTarget(first_hit_diff));
+            camera_writer.write(ControlMessage::TranslateTarget(first_hit_diff));
         }
     }
 }

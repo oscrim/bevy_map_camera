@@ -8,8 +8,8 @@ use bevy_math::Vec2;
 #[derive(SystemParam)]
 pub(super) struct MouseKeyboardInputs<'w, 's> {
     inputs: Inputs<'w, 's>,
-    ev_motion: EventReader<'w, 's, MouseMotion>,
-    ev_scroll: EventReader<'w, 's, MouseWheel>,
+    ev_motion: MessageReader<'w, 's, MouseMotion>,
+    ev_scroll: MessageReader<'w, 's, MouseWheel>,
 }
 
 impl<'w, 's> Deref for MouseKeyboardInputs<'w, 's> {

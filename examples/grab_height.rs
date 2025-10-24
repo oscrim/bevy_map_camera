@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 use std::time::Duration;
 
 use bevy::color::palettes::css::{DARK_GREEN, TAN};
-use bevy::core_pipeline::auto_exposure::AutoExposurePlugin;
+use bevy::post_process::auto_exposure::AutoExposurePlugin;
 use bevy::prelude::*;
 
 use bevy_input::common_conditions::input_just_pressed;
@@ -10,7 +10,10 @@ use bevy_map_camera::controller::GrabHeightLens;
 use bevy_map_camera::{
     CameraController, CameraControllerSettings, LookTransform, MapCamera, MapCameraPlugin,
 };
-use bevy_tweening::{Animator, EaseMethod, RepeatCount, RepeatStrategy, Tween};
+use bevy_tweening::{
+    AnimTarget, EaseMethod, PlaybackState, RepeatCount, RepeatStrategy, Tween, TweenAnim,
+    TweenState,
+};
 
 fn main() {
     let mut app = App::new();
@@ -145,29 +148,37 @@ fn update_grab_height(
 
 fn toggle_height_animation(
     mut commands: Commands,
-    controller_query: Single<(Entity, &CameraController, Has<Animator<CameraController>>)>,
+    controller_query: Single<(Entity, &CameraController, Option<&mut TweenAnim>)>,
 ) {
-    let (entity, controller, animation_runing) = controller_query.into_inner();
+    let (entity, controller, tween_animation) = controller_query.into_inner();
 
-    if animation_runing {
-        commands
-            .entity(entity)
-            .remove::<Animator<CameraController>>();
-        return;
+    if let Some(mut tween_animation) = tween_animation {
+        if tween_animation.playback_state == PlaybackState::Playing
+            && tween_animation.tween_state() == TweenState::Active
+        {
+            tween_animation.playback_state = PlaybackState::Paused;
+        } else if tween_animation.playback_state == PlaybackState::Paused
+            && tween_animation.tween_state() == TweenState::Active
+        {
+            tween_animation.playback_state = PlaybackState::Playing;
+        }
+    } else {
+        let tween = Tween::new(
+            EaseMethod::EaseFunction(EaseFunction::Linear),
+            Duration::from_secs(5),
+            GrabHeightLens {
+                start: controller.grab_height,
+                end: controller.grab_height + 5.0,
+            },
+        )
+        .with_repeat_strategy(RepeatStrategy::MirroredRepeat)
+        .with_repeat_count(RepeatCount::Infinite);
+
+        commands.entity(entity).insert((
+            AnimTarget::component::<CameraController>(entity),
+            TweenAnim::new(tween).with_destroy_on_completed(false),
+        ));
     }
-
-    let tween = Tween::new(
-        EaseMethod::EaseFunction(EaseFunction::Linear),
-        Duration::from_secs(5),
-        GrabHeightLens {
-            start: controller.grab_height,
-            end: controller.grab_height + 5.0,
-        },
-    )
-    .with_repeat_strategy(RepeatStrategy::MirroredRepeat)
-    .with_repeat_count(RepeatCount::Infinite);
-
-    commands.entity(entity).insert(Animator::new(tween));
 }
 
 fn draw_plane(mut gizmos: Gizmos, controller_query: Single<&CameraController>) {
