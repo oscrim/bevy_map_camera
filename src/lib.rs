@@ -1,5 +1,5 @@
 #![doc = include_str!("../README.md")]
-
+#[deny(warnings)]
 pub mod controller;
 pub mod inputs;
 pub mod look_angles;
