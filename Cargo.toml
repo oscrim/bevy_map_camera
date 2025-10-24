@@ -11,7 +11,7 @@ license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = ["bevy_easings", "bevy_tweening"]
+default = []
 
 easings = ["bevy_easings"]
 tweening = ["bevy_tweening"]
