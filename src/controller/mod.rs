@@ -9,6 +9,7 @@ use std::f32::consts::PI;
 use bevy_app::{App, Plugin, Update};
 use bevy_camera::{Camera, ViewportConversionError};
 use bevy_ecs::prelude::*;
+use bevy_log::info;
 use bevy_math::{Ray3d, Vec2, Vec3};
 use bevy_reflect::prelude::*;
 use bevy_transform::components::GlobalTransform;
@@ -218,7 +219,7 @@ fn control_system(
     transform.eye = transform.target + new_radius * look_angles.unit_vector();
 
     // Add one to make sure the eye is inside the grab plane
-    transform.eye.y = transform.eye.y.max(controller.grab_height + 1.0);
+    transform.eye.y = transform.eye.y.max(controller.grab_height + 0.1);
 }
 
 fn ray_from_screenspace(
