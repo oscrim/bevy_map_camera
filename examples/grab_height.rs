@@ -79,57 +79,54 @@ fn setup(
     ));
 
     // text
-    commands
-        .spawn(Node {
+    commands.spawn((
+        Node {
             flex_direction: FlexDirection::Column,
             ..Default::default()
-        })
-        .with_children(|parent| {
-            parent.spawn((
+        },
+        children![
+            (
                 Text(format!("Press {:?} to pan", settings.buttons.pan)),
                 Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..Default::default()
                 },
                 Label,
-            ));
-
-            parent.spawn((
+            ),
+            (
                 Text(format!("Press {:?} to rotate", settings.buttons.rotate)),
                 Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..default()
                 },
                 Label,
-            ));
-
-            parent.spawn((
+            ),
+            (
                 Text::new("Press ArrowUp to increase height"),
                 Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..default()
                 },
                 Label,
-            ));
-
-            parent.spawn((
+            ),
+            (
                 Text::new("Press ArrowDown to decrease height"),
                 Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..default()
                 },
                 Label,
-            ));
-
-            parent.spawn((
+            ),
+            (
                 Text::new("Press Space to toggle height animation"),
                 Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..default()
                 },
                 Label,
-            ));
-        });
+            )
+        ],
+    ));
 }
 
 fn update_grab_height(
