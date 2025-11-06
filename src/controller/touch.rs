@@ -1,10 +1,9 @@
 use super::{CameraController, ray_from_screenspace};
-use crate::look_transform::Smoother;
-use bevy_app::{App, Plugin, Update};
+use bevy_app::{App, Plugin, PreUpdate};
 use bevy_camera::Camera;
 use bevy_ecs::prelude::*;
 use bevy_input::touch::Touches;
-use bevy_log::{error, info, warn};
+use bevy_log::{error, warn};
 use bevy_math::{Dir3, Ray3d, Vec2, Vec3, primitives::InfinitePlane3d};
 use bevy_picking::{
     backend::ray::{RayId, RayMap},
@@ -28,7 +27,7 @@ impl Plugin for TouchInputPlugin {
         app.register_type::<TouchInputSettings>();
         app.init_resource::<TouchInputSettings>();
         app.add_systems(
-            Update,
+            PreUpdate,
             (zoom_orbit_camera, grab_pan, rotate_orbit_camera).in_set(CameraChange::Before),
         );
     }
@@ -100,17 +99,16 @@ fn rotate_orbit_camera(
 }
 
 fn grab_pan(
-    cam_q: Single<(Entity, &LookTransform, &mut Smoother, &CameraController), With<Camera>>,
+    cam_q: Single<(Entity, &CameraController), With<Camera>>,
     mut inputs: TouchInputs,
     touches: Res<Touches>,
     mut first_ray_hit: Local<Option<Vec3>>,
     mut camera_writer: MessageWriter<ControlMessage>,
-    mut saved_smoother_weight: Local<f32>,
     mut over_threshold: Local<bool>,
     mut first_screen_touch: Local<Option<Vec2>>,
     ray_map: Res<RayMap>,
 ) {
-    let (camera_entity, look_transform, mut smoother, controller) = cam_q.into_inner();
+    let (camera_entity, controller) = cam_q.into_inner();
 
     let intersection = get_plane_intersection_point(controller, &ray_map.map, camera_entity).map(
         |(pointer_id, point)| {
@@ -130,11 +128,6 @@ fn grab_pan(
     if first_ray_hit.is_none() {
         match intersection {
             Ok((Some(touch_pos), intersection_point)) => {
-                info!("Touch grab pan started");
-
-                *saved_smoother_weight = smoother.lag_weight;
-                smoother.lag_weight = 0.1;
-
                 *first_ray_hit = Some(intersection_point);
                 *over_threshold = false;
 
@@ -151,8 +144,6 @@ fn grab_pan(
         || intersection == Err(TouchIntersectionPointError::MultipleTouchRays))
         && first_ray_hit.is_some()
     {
-        info!("Touch grab pan stopped");
-        smoother.lag_weight = *saved_smoother_weight;
         *first_ray_hit = None;
         inputs.clear_last_touches();
     }
@@ -160,14 +151,7 @@ fn grab_pan(
     if let (Ok((Some(touch_pos), point)), Some(first_hit), Some(screen_touch)) =
         (intersection, *first_ray_hit, *first_screen_touch)
     {
-        // Compensate for look transform smoothing to prevent jittering
-        let smoothing_target_diff = if let Some(smoothing_transform) = smoother.lerp_tfm {
-            look_transform.target - smoothing_transform.target
-        } else {
-            Vec3::ZERO
-        };
-
-        let first_hit_diff = first_hit - point - smoothing_target_diff;
+        let first_hit_diff = first_hit - point;
 
         if touch_pos.distance(screen_touch) > 3.0 || *over_threshold {
             *over_threshold = true;

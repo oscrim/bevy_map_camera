@@ -21,7 +21,7 @@ fn main() {
 
     app.add_systems(Startup, setup);
     app.add_systems(
-        Update,
+        PreUpdate,
         (
             (update_grab_height, draw_plane).chain(),
             toggle_height_animation.run_if(input_just_pressed(KeyCode::Space)),

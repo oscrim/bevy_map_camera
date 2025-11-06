@@ -14,7 +14,6 @@ use bevy_transform::components::Transform;
 // re-exports
 pub use controller::{CameraController, CameraControllerSettings};
 pub use look_transform::LookTransform;
-use look_transform::Smoother;
 
 /// Orbital camera plugin
 #[derive(Clone, Copy)]
@@ -22,17 +21,15 @@ pub struct MapCameraPlugin;
 
 impl Plugin for MapCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<LookTransform>();
-
         app.configure_sets(
-            Update,
+            PreUpdate,
             (CameraChange::Before, CameraChange::After)
                 .chain()
                 .after(InputSystems),
         );
 
         app.add_systems(
-            Update,
+            PreUpdate,
             look_transform_system
                 .after(CameraChange::Before)
                 .before(CameraChange::After),
@@ -43,7 +40,7 @@ impl Plugin for MapCameraPlugin {
 
         #[cfg(feature = "bevy_easings")]
         app.add_systems(
-            Update,
+            PreUpdate,
             bevy_easings::custom_ease_system::<(), LookTransform>.in_set(CameraChange::Before),
         );
         #[cfg(feature = "bevy_tweening")]
@@ -53,17 +50,11 @@ impl Plugin for MapCameraPlugin {
     }
 }
 
-fn look_transform_system(
-    mut cameras: Query<(&LookTransform, &mut Transform, Option<&mut Smoother>)>,
-) {
-    for (look_transform, mut scene_transform, smoother) in cameras.iter_mut() {
-        match smoother {
-            Some(mut s) if s.enabled => {
-                *scene_transform = s.smooth_transform(look_transform).into();
-            }
-            _ => (),
-        };
-    }
+fn look_transform_system(mut lts: Query<(&LookTransform, &mut Transform)>) {
+    lts.iter_mut()
+        .for_each(|(&look_transform, mut scene_transform)| {
+            *scene_transform = look_transform.into();
+        });
 }
 
 #[derive(Component)]
@@ -77,6 +68,7 @@ fn default_camera() -> Camera {
     }
 }
 
+/// Runs in the PreUpdate schedule
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 pub enum CameraChange {
     /// Systems that should run before any changes to the camera transform are made

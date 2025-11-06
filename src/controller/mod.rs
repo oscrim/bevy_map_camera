@@ -6,7 +6,7 @@ mod touch_inputs;
 
 use std::f32::consts::PI;
 
-use bevy_app::{App, Plugin, Update};
+use bevy_app::{App, Plugin, PreUpdate};
 use bevy_camera::{Camera, ViewportConversionError};
 use bevy_ecs::prelude::*;
 
@@ -126,7 +126,7 @@ impl Plugin for CameraControllerPlugin {
         app.add_plugins(touch::TouchInputPlugin);
 
         app.add_systems(
-            Update,
+            PreUpdate,
             (
                 control_system.run_if(on_message::<ControlMessage>),
                 update_height,
