@@ -63,7 +63,7 @@ pub struct MapCamera;
 
 fn default_camera() -> Camera {
     Camera {
-        msaa_writeback: false,
+        msaa_writeback: bevy_camera::MsaaWriteback::Off,
         ..Default::default()
     }
 }
