@@ -53,8 +53,8 @@ impl<'w, 's> TouchInputs<'w, 's> {
             return None;
         }
 
-        let touch1 = touches[0].clone();
-        let touch2 = touches[1].clone();
+        let touch1 = *touches[0];
+        let touch2 = *touches[1];
 
         let last1 = self.last_touch_1.unwrap_or(touch1.position());
         let last2 = self.last_touch_2.unwrap_or(touch2.position());

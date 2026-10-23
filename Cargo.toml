@@ -6,7 +6,7 @@ description = "3D Camera Controller for Bevy"
 authors = ["Oscar Rimsby <oscar.rimsby@mobilaris.se>"]
 keywords = ["bevy", "camera"]
 repository = "https://github.com/oscrim/bevy_map_camera"
-rust-version = "1.85"
+rust-version = "1.95"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -21,24 +21,24 @@ tweening = ["bevy_tweening"]
 approx = "0.5"
 serde = { version = "1.0", features = ["derive"], optional = true }
 
-bevy_app = { version = "0.18", default-features = false }
-bevy_camera = { version = "0.18", default-features = false }
-bevy_ecs = { version = "0.18", default-features = false }
-bevy_input = { version = "0.18", default-features = false }
-bevy_log = { version = "0.18", default-features = false }
-bevy_math = { version = "0.18", default-features = false }
-bevy_picking = { version = "0.18", default-features = false }
-bevy_platform = { version = "0.18", default-features = false }
-bevy_reflect = { version = "0.18", default-features = false }
-bevy_transform = { version = "0.18", default-features = false }
-bevy_window = { version = "0.18", default-features = false }
+bevy_app = { version = "0.19", default-features = false }
+bevy_camera = { version = "0.19", default-features = false }
+bevy_ecs = { version = "0.19", default-features = false }
+bevy_input = { version = "0.19", default-features = false }
+bevy_log = { version = "0.19", default-features = false }
+bevy_math = { version = "0.19", default-features = false }
+bevy_picking = { version = "0.19", default-features = false }
+bevy_platform = { version = "0.19", default-features = false }
+bevy_reflect = { version = "0.19", default-features = false }
+bevy_transform = { version = "0.19", default-features = false }
+bevy_window = { version = "0.19", default-features = false }
 
-bevy_easings = { version = "0.18", optional = true }
-bevy_tweening = { version = "0.15", optional = true, default-features = false }
+bevy_easings = { version = "0.19", optional = true }
+bevy_tweening = { version = "0.16", optional = true, default-features = false }
 
 
 [dev-dependencies]
-bevy = { version = "0.18" }
+bevy = { version = "0.19" }
 
 [[example]]
 name = "simple"

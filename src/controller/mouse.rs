@@ -44,8 +44,7 @@ fn rotate_orbit_camera(
                 .buttons
                 .rotate_alt
                 .as_ref()
-                .map(|alt| mouse_inputs.mouse_drag(alt))
-                .flatten()
+                .and_then(|alt| mouse_inputs.mouse_drag(alt))
         })
     else {
         return;
@@ -107,6 +106,7 @@ fn zoom_orbit_camera(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn grab_pan(
     mut commands: Commands,
     cam_q: Single<(Entity, &CameraController), With<Camera>>,

@@ -98,6 +98,7 @@ fn rotate_orbit_camera(
     ));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn grab_pan(
     cam_q: Single<(Entity, &CameraController), With<Camera>>,
     mut inputs: TouchInputs,
