@@ -35,7 +35,7 @@ impl<'w, 's> MouseKeyboardInputs<'w, 's> {
     }
 
     pub fn scroll_scalar(&mut self, pixels_per_line: f32, scroll_sensitivity: f32) -> Option<f32> {
-        if self.ev_scroll.len() == 0 {
+        if self.ev_scroll.is_empty() {
             return None;
         }
 

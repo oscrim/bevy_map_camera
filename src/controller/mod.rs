@@ -232,7 +232,5 @@ fn ray_from_screenspace(
     if let Some(viewport) = &camera.viewport {
         viewport_pos -= viewport.physical_position.as_vec2() / window.scale_factor();
     }
-    camera
-        .viewport_to_world(camera_transform, viewport_pos)
-        .map(Ray3d::from)
+    camera.viewport_to_world(camera_transform, viewport_pos)
 }
