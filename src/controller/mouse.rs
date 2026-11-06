@@ -119,9 +119,14 @@ fn grab_pan(
 ) {
     let (camera_entity, controller) = cam_q.into_inner();
     let window_entity = primary_window_q.into_inner();
-    let drag_buttons = &settings.buttons.pan;
+    let buttons = &settings.buttons;
+    let pan_pressed = inputs.multi_pressed(&buttons.pan)
+        || buttons
+            .pan_alt
+            .as_ref()
+            .is_some_and(|alt| inputs.multi_pressed(alt));
 
-    if inputs.multi_pressed(drag_buttons) {
+    if pan_pressed {
         let Some(intersection_point) =
             get_plane_intersection_point(controller, &ray_map.map, camera_entity)
         else {
