@@ -72,7 +72,8 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let Some(target) = surfaces.pick_point(ray, controller, camera_lt) else {
+    let Some(target) = surfaces.pick_point(ray, controller, camera_lt, settings.minimum_pan_angle)
+    else {
         warn!("Cursor click did not intersect with Grab plane");
         return;
     };
@@ -115,6 +116,7 @@ fn grab_pan(
     mut over_threshold: Local<bool>,
     mut first_screen_touch: Local<Option<Vec2>>,
     ray_map: Res<RayMap>,
+    settings: Res<CameraControllerSettings>,
     mut surfaces: GrabSurfaces,
 ) {
     let (camera_entity, controller, look, mut follow) = cam_q.into_inner();
@@ -128,8 +130,10 @@ fn grab_pan(
     // Intersect with the plane of the ongoing drag, or pick a new plane if no drag has started
     let intersection = get_touch_ray(&ray_map.map, camera_entity).and_then(|(pointer_id, ray)| {
         let (plane, point) = match *first_ray_hit {
-            Some((plane, _)) => plane.intersect(ray, controller).map(|point| (plane, point)),
-            None => surfaces.drag_plane(ray, controller, look),
+            Some((plane, _)) => plane
+                .intersect(ray, controller, settings.minimum_pan_angle)
+                .map(|point| (plane, point)),
+            None => surfaces.drag_plane(ray, controller, look, settings.minimum_pan_angle),
         }
         .ok_or(TouchIntersectionPointError::NoIntersection)?;
 

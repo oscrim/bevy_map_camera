@@ -16,6 +16,7 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
 - Grab pan
   - Configurable height
 - Camera target follows XZ-plane
+- Pans and zooms towards the horizon are bounded (`minimum_pan_angle`), so the camera can't be flung away
 - Grab surfaces
   - Add the `GrabSurface` component to meshes to pan and zoom along them instead of the XZ-plane
   - The camera target follows the surface in the centre of the view, unless the last pan started outside every surface (then it floats)

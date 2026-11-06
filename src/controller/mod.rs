@@ -37,6 +37,11 @@ pub struct CameraControllerSettings {
     pub minimum_pitch: f32,
     pub minimum_zoom: f32,
     pub maximum_zoom: f32,
+    /// The smallest angle, in radians, a pan or zoom ray may make with a horizontal drag plane.
+    ///
+    /// Rays closer to the horizon are tilted down to this angle, so dragging towards the horizon
+    /// can't fling the camera away. The camera reaches at most `height / tan(angle)` per drag.
+    pub minimum_pan_angle: f32,
     /// Buttons to use when controlling the camera with a mouse (or some touchpads)
     pub buttons: CameraControllerButtons,
 }
@@ -53,6 +58,7 @@ impl Default for CameraControllerSettings {
             minimum_pitch: 25.0 * PI / 180.0,
             minimum_zoom: 1.5,
             maximum_zoom: 1_000.0,
+            minimum_pan_angle: 10.0 * PI / 180.0,
             buttons: CameraControllerButtons::default(),
         }
     }
