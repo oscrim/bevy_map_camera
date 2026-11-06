@@ -1,10 +1,13 @@
-use super::{CameraController, ray_from_screenspace};
+use super::{
+    CameraController, ray_from_screenspace,
+    surface::{DragPlane, GrabSurfaces, SurfaceFollow},
+};
 use bevy_app::{App, Plugin, PreUpdate};
 use bevy_camera::Camera;
 use bevy_ecs::prelude::*;
 use bevy_input::touch::Touches;
 use bevy_log::{error, warn};
-use bevy_math::{Dir3, Ray3d, Vec2, Vec3, primitives::InfinitePlane3d};
+use bevy_math::{Ray3d, Vec2, Vec3};
 use bevy_picking::{
     backend::ray::{RayId, RayMap},
     pointer::PointerId,
@@ -40,6 +43,7 @@ fn zoom_orbit_camera(
     main_window: Single<&Window, With<PrimaryWindow>>,
     settings: Res<CameraControllerSettings>,
     mut camera_writer: MessageWriter<ControlMessage>,
+    mut surfaces: GrabSurfaces,
 ) {
     // Get the deltas of the two touches
     let Some(Pinch {
@@ -68,15 +72,10 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let Some(target_distance) = ray.intersect_plane(
-        Vec3::Y * controller.grab_height,
-        InfinitePlane3d { normal: Dir3::Y },
-    ) else {
+    let Some(target) = surfaces.pick_point(ray, controller, camera_lt) else {
         warn!("Cursor click did not intersect with Grab plane");
         return;
     };
-
-    let target = ray.get_point(target_distance);
 
     camera_writer.write(ControlMessage::Zoom {
         zoom_scalar: scalar,
@@ -100,27 +99,46 @@ fn rotate_orbit_camera(
 
 #[allow(clippy::too_many_arguments)]
 fn grab_pan(
-    cam_q: Single<(Entity, &CameraController), With<Camera>>,
+    cam_q: Single<
+        (
+            Entity,
+            &CameraController,
+            &LookTransform,
+            &mut SurfaceFollow,
+        ),
+        With<Camera>,
+    >,
     mut inputs: TouchInputs,
     touches: Res<Touches>,
-    mut first_ray_hit: Local<Option<Vec3>>,
+    mut first_ray_hit: Local<Option<(DragPlane, Vec3)>>,
     mut camera_writer: MessageWriter<ControlMessage>,
     mut over_threshold: Local<bool>,
     mut first_screen_touch: Local<Option<Vec2>>,
     ray_map: Res<RayMap>,
+    mut surfaces: GrabSurfaces,
 ) {
-    let (camera_entity, controller) = cam_q.into_inner();
+    let (camera_entity, controller, look, mut follow) = cam_q.into_inner();
 
-    let intersection = get_plane_intersection_point(controller, &ray_map.map, camera_entity).map(
-        |(pointer_id, point)| {
-            (
-                pointer_id
-                    .get_touch_id()
-                    .and_then(|id| touches.get_pressed(id).map(|touch| touch.position())),
-                point,
-            )
-        },
-    );
+    if !controller.enabled {
+        *first_ray_hit = None;
+        *first_screen_touch = None;
+        return;
+    }
+
+    // Intersect with the plane of the ongoing drag, or pick a new plane if no drag has started
+    let intersection = get_touch_ray(&ray_map.map, camera_entity).and_then(|(pointer_id, ray)| {
+        let (plane, point) = match *first_ray_hit {
+            Some((plane, _)) => plane.intersect(ray, controller).map(|point| (plane, point)),
+            None => surfaces.drag_plane(ray, controller, look),
+        }
+        .ok_or(TouchIntersectionPointError::NoIntersection)?;
+
+        let touch_pos = pointer_id
+            .get_touch_id()
+            .and_then(|id| touches.get_pressed(id).map(|touch| touch.position()));
+
+        Ok((touch_pos, plane, point))
+    });
 
     if let Err(TouchIntersectionPointError::NoIntersection) = intersection {
         warn!("Touch Grab pan intersection did not intersect with Grab plane");
@@ -128,13 +146,13 @@ fn grab_pan(
 
     if first_ray_hit.is_none() {
         match intersection {
-            Ok((Some(touch_pos), intersection_point)) => {
-                *first_ray_hit = Some(intersection_point);
+            Ok((Some(touch_pos), plane, intersection_point)) => {
+                *first_ray_hit = Some((plane, intersection_point));
                 *over_threshold = false;
 
                 *first_screen_touch = Some(touch_pos);
             }
-            Ok((None, _)) => {
+            Ok((None, _, _)) => {
                 warn!("Tried to start Touch grab pan but no touch position was found");
             }
             _ => {}
@@ -149,27 +167,32 @@ fn grab_pan(
         inputs.clear_last_touches();
     }
 
-    if let (Ok((Some(touch_pos), point)), Some(first_hit), Some(screen_touch)) =
+    if let (Ok((Some(touch_pos), _, point)), Some((plane, first_hit)), Some(screen_touch)) =
         (intersection, *first_ray_hit, *first_screen_touch)
     {
         let first_hit_diff = first_hit - point;
 
-        if touch_pos.distance(screen_touch) > 3.0 || *over_threshold {
+        if (touch_pos.distance(screen_touch) > 3.0 || *over_threshold)
+            && first_hit_diff.length_squared() > 1e-10
+        {
+            if !*over_threshold {
+                // Only an actual pan changes whether the target follows the surfaces, not a tap
+                follow.set_if_neq(SurfaceFollow::after_drag_on(&plane));
+            }
             *over_threshold = true;
             camera_writer.write(ControlMessage::TranslateTarget(first_hit_diff));
         }
     }
 }
 
-fn get_plane_intersection_point(
-    controller: &CameraController,
+fn get_touch_ray(
     ray_map: &HashMap<RayId, Ray3d>,
     camera_entity: Entity,
-) -> Result<(PointerId, Vec3), TouchIntersectionPointError> {
+) -> Result<(PointerId, Ray3d), TouchIntersectionPointError> {
     let mut filtered_map = ray_map
         .iter()
         .filter(|(ray_id, _)| ray_id.pointer.is_touch() && ray_id.camera == camera_entity)
-        .map(|(ray_id, ray)| (ray_id.pointer, ray))
+        .map(|(ray_id, ray)| (ray_id.pointer, *ray))
         .collect::<Vec<_>>();
 
     if filtered_map.len() > 1 {
@@ -177,16 +200,9 @@ fn get_plane_intersection_point(
         return Err(TouchIntersectionPointError::MultipleTouchRays);
     }
 
-    let (pointer_id, ray) = filtered_map
+    filtered_map
         .pop()
-        .ok_or(TouchIntersectionPointError::NoTouchRay)?;
-
-    ray.intersect_plane(
-        Vec3::Y * controller.grab_height,
-        InfinitePlane3d { normal: Dir3::Y },
-    )
-    .map(|distance: f32| (pointer_id, ray.get_point(distance)))
-    .ok_or(TouchIntersectionPointError::NoIntersection)
+        .ok_or(TouchIntersectionPointError::NoTouchRay)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

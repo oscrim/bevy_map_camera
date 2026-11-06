@@ -3,6 +3,11 @@ use bevy_math::prelude::*;
 
 const PI: f32 = std::f32::consts::PI;
 
+/// The highest allowed pitch, just short of straight up/down.
+///
+/// Things can get weird if we are parallel to the UP vector.
+pub const MAX_PITCH: f32 = PI / 2.0 - 0.01;
+
 /// A (yaw, pitch) pair representing a direction.
 #[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct LookAngles {
@@ -41,10 +46,10 @@ impl LookAngles {
         self.set_yaw(self.get_yaw() + delta);
     }
 
+    // Not `clamp`, so a NaN pitch ends up at the limit instead of breaking the camera
+    #[allow(clippy::manual_clamp)]
     pub fn set_pitch(&mut self, pitch: f32) {
-        // Things can get weird if we are parallel to the UP vector.
-        let up_eps = 0.01;
-        self.pitch = pitch.min(PI / 2.0 - up_eps).max(-PI / 2.0 + up_eps);
+        self.pitch = pitch.min(MAX_PITCH).max(-MAX_PITCH);
     }
 
     pub fn get_pitch(&self) -> f32 {
@@ -53,6 +58,11 @@ impl LookAngles {
 
     pub fn add_pitch(&mut self, delta: f32) {
         self.set_pitch(self.get_pitch() + delta);
+    }
+
+    /// True if the pitch is at [`MAX_PITCH`], as close to top down as allowed.
+    pub fn is_at_max_pitch(&self) -> bool {
+        self.pitch >= MAX_PITCH - 1e-3
     }
 
     pub fn assert_not_looking_up(&self) {
@@ -160,5 +170,13 @@ mod tests {
             yaw_and_pitch_from_vector(Vec3::new(-(0.5f32.sqrt()), -1.0, 0.5f32.sqrt()));
         assert_relative_eq!(yaw, -PI / 4.0, epsilon = 1e-6f32);
         assert_relative_eq!(pitch, -PI / 4.0);
+    }
+
+    #[test]
+    fn test_nan_pitch_goes_to_limit() {
+        let mut angles = LookAngles::default();
+        angles.set_pitch(f32::NAN);
+        assert!(!angles.get_pitch().is_nan());
+        assert!(angles.get_pitch().abs() <= MAX_PITCH);
     }
 }

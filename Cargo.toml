@@ -27,7 +27,8 @@ bevy_ecs = { version = "0.19", default-features = false }
 bevy_input = { version = "0.19", default-features = false }
 bevy_log = { version = "0.19", default-features = false }
 bevy_math = { version = "0.19", default-features = false }
-bevy_picking = { version = "0.19", default-features = false }
+bevy_mesh = { version = "0.19", default-features = false }
+bevy_picking = { version = "0.19", default-features = false, features = ["mesh_picking"] }
 bevy_platform = { version = "0.19", default-features = false }
 bevy_reflect = { version = "0.19", default-features = false }
 bevy_transform = { version = "0.19", default-features = false }
@@ -42,6 +43,9 @@ bevy = { version = "0.19" }
 
 [[example]]
 name = "simple"
+
+[[example]]
+name = "grab_surface"
 
 [[example]]
 name = "easing"
