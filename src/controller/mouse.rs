@@ -95,7 +95,8 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let Some(target) = surfaces.pick_point(ray, controller, camera_lt) else {
+    let Some(target) = surfaces.pick_point(ray, controller, camera_lt, settings.minimum_pan_angle)
+    else {
         return;
     };
 
@@ -143,7 +144,9 @@ fn grab_pan(
         };
 
         if let Some((plane, first_hit)) = *first_ray_hit {
-            let Some(intersection_point) = plane.intersect(ray, controller) else {
+            let Some(intersection_point) =
+                plane.intersect(ray, controller, settings.minimum_pan_angle)
+            else {
                 warn!("Mouse Grab pan intersection did not intersect with Grab plane");
                 return;
             };
@@ -161,7 +164,9 @@ fn grab_pan(
 
             camera_writer.write(ControlMessage::TranslateTarget(first_hit_diff));
         } else {
-            let Some(drag_plane) = surfaces.drag_plane(ray, controller, look) else {
+            let Some(drag_plane) =
+                surfaces.drag_plane(ray, controller, look, settings.minimum_pan_angle)
+            else {
                 //Grab pan pressed without first ray hit, return
                 warn!("Mouse Grab pan intersection did not intersect with Grab plane");
                 return;
