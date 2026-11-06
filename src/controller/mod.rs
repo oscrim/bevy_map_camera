@@ -1,16 +1,17 @@
 mod mouse;
 mod mouse_input;
 mod resources;
+mod surface;
 mod touch;
 mod touch_inputs;
 
 use std::f32::consts::PI;
 
 use bevy_app::{App, Plugin, PreUpdate};
-use bevy_camera::{Camera, ViewportConversionError};
+use bevy_camera::{Camera, ViewportConversionError, primitives::Aabb};
 use bevy_ecs::prelude::*;
 
-use bevy_math::{Ray3d, Vec2, Vec3};
+use bevy_math::{Dir3, Ray3d, Vec2, Vec3};
 use bevy_reflect::prelude::*;
 use bevy_transform::components::GlobalTransform;
 use bevy_window::Window;
@@ -18,6 +19,9 @@ use bevy_window::Window;
 use crate::{CameraChange, LookTransform, inputs::InputButton, look_angles::LookAngles};
 
 pub use resources::CameraControllerButtons;
+pub use surface::GrabSurface;
+
+use surface::{GrabSurfaces, SurfaceFollow};
 
 #[derive(Resource, Clone, Reflect)]
 #[reflect(Resource)]
@@ -68,11 +72,14 @@ impl CameraControllerSettings {
 /// A 3rd person camera that orbits around the target.
 #[derive(Clone, Component, Copy, Debug, Reflect)]
 #[reflect(Component, Default, Debug)]
+#[require(SurfaceFollow)]
 pub struct CameraController {
     pub enabled: bool,
     pub pixels_per_line: f32,
     pub smoothing_weight: f32,
-    /// The height of the grab plane that the camera moves along
+    /// The height of the grab plane that the camera moves along.
+    ///
+    /// Ignored while any [`GrabSurface`] exists.
     pub grab_height: f32,
 }
 
@@ -118,6 +125,7 @@ impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<CameraController>();
         app.register_type::<CameraControllerSettings>();
+        app.register_type::<GrabSurface>();
         app.init_resource::<CameraControllerSettings>();
 
         app.add_message::<ControlMessage>();
@@ -128,8 +136,10 @@ impl Plugin for CameraControllerPlugin {
         app.add_systems(
             PreUpdate,
             (
-                control_system.run_if(on_message::<ControlMessage>),
+                // Before control_system, so a removed surface is handled before it pins the height
                 update_height,
+                control_system.run_if(on_message::<ControlMessage>),
+                snap_target_to_surface,
             )
                 .chain()
                 .after(CameraChange::Before)
@@ -139,15 +149,53 @@ impl Plugin for CameraControllerPlugin {
 }
 
 fn update_height(
-    camera: Single<(&mut LookTransform, &CameraController), Changed<CameraController>>,
+    camera: Single<(
+        &mut LookTransform,
+        Ref<CameraController>,
+        &mut SurfaceFollow,
+    )>,
+    settings: Res<CameraControllerSettings>,
+    surfaces: GrabSurfaces,
+    mut was_active: Local<bool>,
 ) {
-    let (mut transform, controller) = camera.into_inner();
+    let (mut transform, controller, mut follow) = camera.into_inner();
 
+    // Checked before tracking the surfaces, so a removal while disabled is handled on re-enable
     if !controller.enabled {
         return;
     }
 
+    let active = surfaces.is_active();
+    let surfaces_removed = std::mem::replace(&mut *was_active, active) && !active;
+
+    if active {
+        return;
+    }
+
+    if surfaces_removed {
+        // Surfaces added later should be followed again
+        follow.set_if_neq(SurfaceFollow::default());
+
+        // Slide the target along the look direction onto the grab plane, so the view stays put
+        if let Ok(look_direction) = Dir3::new(transform.target - transform.eye)
+            && let Some(point) = surface::intersect_grab_height(
+                Ray3d::new(transform.eye, look_direction),
+                &controller,
+            )
+            && (settings.minimum_zoom..=settings.maximum_zoom)
+                .contains(&point.distance(transform.eye))
+        {
+            transform.target = point;
+            return;
+        }
+    } else if !controller.is_changed() {
+        return;
+    }
+
     let y_diff = controller.grab_height - transform.target.y;
+    if y_diff == 0.0 {
+        return;
+    }
     transform.target.y = controller.grab_height;
 
     transform.eye.y += y_diff;
@@ -157,8 +205,11 @@ fn control_system(
     mut events: MessageReader<ControlMessage>,
     camera: Single<(&mut LookTransform, &CameraController)>,
     settings: Res<CameraControllerSettings>,
+    surfaces: GrabSurfaces,
 ) {
     let (mut transform, controller) = camera.into_inner();
+    // With grab surfaces the target height is set by `snap_target_to_surface` instead
+    let use_grab_height = !surfaces.is_active();
 
     if !controller.enabled {
         // Read all events to mark them as read
@@ -201,7 +252,10 @@ fn control_system(
                 }
 
                 let mut dir = transform.target - *zoom_target;
-                dir.y = 0.0;
+                if use_grab_height {
+                    // The target and zoom point are both on the grab plane
+                    dir.y = 0.0;
+                }
 
                 transform.target -= dir * (1. - *zoom_scalar);
             }
@@ -214,12 +268,75 @@ fn control_system(
         .min(settings.maximum_zoom)
         .max(settings.minimum_zoom);
 
-    transform.target.y = controller.grab_height;
+    if use_grab_height {
+        transform.target.y = controller.grab_height;
+    }
 
     transform.eye = transform.target + new_radius * look_angles.unit_vector();
 
-    // Add one to make sure the eye is inside the grab plane
-    transform.eye.y = transform.eye.y.max(controller.grab_height + 0.1);
+    // Make sure the eye stays above the grab plane
+    transform.eye.y = transform.eye.y.max(transform.target.y + 0.1);
+}
+
+/// A hittable [`GrabSurface`] that was added or moved.
+type ChangedSurface = (
+    surface::HittableSurface,
+    Or<(
+        Changed<GrabSurface>,
+        Changed<GlobalTransform>,
+        Changed<Aabb>,
+    )>,
+);
+
+/// Moves the camera target along the look direction onto the [`GrabSurface`] in the centre
+/// of the view. The eye stays put, so the view itself does not change.
+fn snap_target_to_surface(
+    camera: Single<(
+        &mut LookTransform,
+        Ref<CameraController>,
+        Ref<SurfaceFollow>,
+    )>,
+    settings: Res<CameraControllerSettings>,
+    mut surfaces: GrabSurfaces,
+    changed_surfaces: Query<(), ChangedSurface>,
+    mut removed_surfaces: RemovedComponents<GrabSurface>,
+) {
+    let (mut transform, controller, follow) = camera.into_inner();
+    // Always drain the removals so old ones don't trigger a cast later
+    let surface_removed = removed_surfaces.read().count() > 0;
+
+    if !controller.enabled || follow.floating || !surfaces.is_active() {
+        return;
+    }
+
+    // Only ray cast when the camera or a surface changed. A controller change covers being
+    // re-enabled after surface changes that happened while disabled.
+    if !transform.is_changed()
+        && !follow.is_changed()
+        && !controller.is_changed()
+        && !surface_removed
+        && changed_surfaces.is_empty()
+    {
+        return;
+    }
+
+    let Ok(look_direction) = Dir3::new(transform.target - transform.eye) else {
+        return;
+    };
+
+    let Some(hit) = surfaces.cast(Ray3d::new(transform.eye, look_direction)) else {
+        return;
+    };
+
+    // Keep the target where it is rather than break the zoom limits, which would move the eye
+    let distance = hit.distance(transform.eye);
+    if distance < settings.minimum_zoom || distance > settings.maximum_zoom {
+        return;
+    }
+
+    if hit.distance_squared(transform.target) > 1e-8 {
+        transform.target = hit;
+    }
 }
 
 fn ray_from_screenspace(

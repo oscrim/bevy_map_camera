@@ -12,7 +12,7 @@ use bevy_input::InputSystems;
 use bevy_transform::components::Transform;
 
 // re-exports
-pub use controller::{CameraController, CameraControllerSettings};
+pub use controller::{CameraController, CameraControllerSettings, GrabSurface};
 pub use look_transform::LookTransform;
 
 /// Orbital camera plugin

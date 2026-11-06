@@ -2,7 +2,7 @@ use bevy_app::prelude::*;
 use bevy_camera::Camera;
 use bevy_ecs::prelude::*;
 use bevy_log::warn;
-use bevy_math::{Dir3, Ray3d, Vec3, primitives::InfinitePlane3d};
+use bevy_math::{Ray3d, Vec3};
 use bevy_picking::{
     backend::ray::{RayId, RayMap},
     pointer::PointerId,
@@ -11,7 +11,10 @@ use bevy_platform::collections::HashMap;
 use bevy_transform::components::GlobalTransform;
 use bevy_window::{CursorIcon, PrimaryWindow, SystemCursorIcon, Window};
 
-use super::ray_from_screenspace;
+use super::{
+    ray_from_screenspace,
+    surface::{DragPlane, GrabSurfaces, SurfaceFollow},
+};
 
 use super::{
     CameraController, CameraControllerSettings, ControlMessage, mouse_input::MouseKeyboardInputs,
@@ -62,6 +65,7 @@ fn zoom_orbit_camera(
     main_window: Single<&Window, With<PrimaryWindow>>,
     mut mouse_inputs: MouseKeyboardInputs,
     mut camera_writer: MessageWriter<ControlMessage>,
+    mut surfaces: GrabSurfaces,
 ) {
     let (controller, camera, camera_gt, camera_lt) = cam_q.into_inner();
     let window = main_window.into_inner();
@@ -91,14 +95,9 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let Some(target_distance) = ray.intersect_plane(
-        Vec3::Y * controller.grab_height,
-        InfinitePlane3d { normal: Dir3::Y },
-    ) else {
+    let Some(target) = surfaces.pick_point(ray, controller, camera_lt) else {
         return;
     };
-
-    let target = ray.get_point(target_distance);
 
     camera_writer.write(ControlMessage::Zoom {
         zoom_scalar: scalar,
@@ -109,36 +108,65 @@ fn zoom_orbit_camera(
 #[allow(clippy::too_many_arguments)]
 fn grab_pan(
     mut commands: Commands,
-    cam_q: Single<(Entity, &CameraController), With<Camera>>,
+    cam_q: Single<
+        (
+            Entity,
+            &CameraController,
+            &LookTransform,
+            &mut SurfaceFollow,
+        ),
+        With<Camera>,
+    >,
     settings: Res<CameraControllerSettings>,
     inputs: Inputs,
-    mut first_ray_hit: Local<Option<Vec3>>,
+    mut first_ray_hit: Local<Option<(DragPlane, Vec3)>>,
+    mut moved: Local<bool>,
     primary_window_q: Single<Entity, With<PrimaryWindow>>,
     mut camera_writer: MessageWriter<ControlMessage>,
     ray_map: Res<RayMap>,
+    mut surfaces: GrabSurfaces,
 ) {
-    let (camera_entity, controller) = cam_q.into_inner();
+    let (camera_entity, controller, look, mut follow) = cam_q.into_inner();
     let window_entity = primary_window_q.into_inner();
     let buttons = &settings.buttons;
-    let pan_pressed = inputs.multi_pressed(&buttons.pan)
-        || buttons
-            .pan_alt
-            .as_ref()
-            .is_some_and(|alt| inputs.multi_pressed(alt));
+    // A disabled controller behaves as if the pan buttons were released
+    let pan_pressed = controller.enabled
+        && (inputs.multi_pressed(&buttons.pan)
+            || buttons
+                .pan_alt
+                .as_ref()
+                .is_some_and(|alt| inputs.multi_pressed(alt)));
 
     if pan_pressed {
-        let Some(intersection_point) =
-            get_plane_intersection_point(controller, &ray_map.map, camera_entity)
-        else {
-            //Grab pan pressed without first ray hit, return
+        let Some(ray) = get_mouse_ray(&ray_map.map, camera_entity) else {
             return;
         };
 
-        if let Some(first_hit) = *first_ray_hit {
+        if let Some((plane, first_hit)) = *first_ray_hit {
+            let Some(intersection_point) = plane.intersect(ray, controller) else {
+                warn!("Mouse Grab pan intersection did not intersect with Grab plane");
+                return;
+            };
+
             let first_hit_diff = first_hit - intersection_point;
+            if first_hit_diff.length_squared() <= 1e-10 {
+                return;
+            }
+
+            if !*moved {
+                // Only an actual pan changes whether the target follows the surfaces, not a click
+                *moved = true;
+                follow.set_if_neq(SurfaceFollow::after_drag_on(&plane));
+            }
 
             camera_writer.write(ControlMessage::TranslateTarget(first_hit_diff));
         } else {
+            let Some(drag_plane) = surfaces.drag_plane(ray, controller, look) else {
+                //Grab pan pressed without first ray hit, return
+                warn!("Mouse Grab pan intersection did not intersect with Grab plane");
+                return;
+            };
+
             if let Ok(mut ecmd) = commands.get_entity(window_entity) {
                 ecmd.entry::<CursorIcon>()
                     .and_modify(|mut icon| {
@@ -147,10 +175,12 @@ fn grab_pan(
                     .or_insert(CursorIcon::System(SystemCursorIcon::Grabbing));
             }
 
-            *first_ray_hit = Some(intersection_point);
+            *first_ray_hit = Some(drag_plane);
+            *moved = false;
         }
     } else if first_ray_hit.is_some() {
         *first_ray_hit = None;
+        *moved = false;
         if let Ok(mut ecmd) = commands.get_entity(window_entity) {
             ecmd.entry::<CursorIcon>().and_modify(|mut icon| {
                 icon.set_if_neq(CursorIcon::System(SystemCursorIcon::Default));
@@ -159,31 +189,15 @@ fn grab_pan(
     }
 }
 
-fn get_plane_intersection_point(
-    controller: &CameraController,
-    ray_map: &HashMap<RayId, Ray3d>,
-    camera_entity: Entity,
-) -> Option<Vec3> {
+fn get_mouse_ray(ray_map: &HashMap<RayId, Ray3d>, camera_entity: Entity) -> Option<Ray3d> {
     let ray_id = RayId {
         camera: camera_entity,
         pointer: PointerId::Mouse,
     };
 
-    let Some(ray) = ray_map.get(&ray_id) else {
+    let ray = ray_map.get(&ray_id).copied();
+    if ray.is_none() {
         warn!("No Ray3d for mouse pointer!");
-        return None;
-    };
-
-    let intersection_point = ray
-        .intersect_plane(
-            Vec3::Y * controller.grab_height,
-            InfinitePlane3d { normal: Dir3::Y },
-        )
-        .map(|distance: f32| ray.get_point(distance));
-
-    if intersection_point.is_none() {
-        warn!("Mouse Grab pan intersection did not intersect with Grab plane");
-    };
-
-    intersection_point
+    }
+    ray
 }
