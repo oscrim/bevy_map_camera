@@ -180,16 +180,13 @@ impl GrabSurfaces<'_, '_> {
         look: &LookTransform,
         min_angle: f32,
     ) -> Option<(DragPlane, Vec3)> {
-        let plane = if !self.is_active() {
-            DragPlane::GrabHeight
-        } else if let Some(hit) = self.cast(ray) {
-            surface_plane(hit, ray, look, min_angle)?
-        } else {
-            DragPlane::View {
+        let plane = match self.hover(ray, look, min_angle)? {
+            Hover::Plane(plane) => plane,
+            Hover::Miss => DragPlane::View {
                 origin: look.target,
                 normal: view_normal(look)?,
                 floating: true,
-            }
+            },
         };
 
         plane
@@ -197,17 +194,43 @@ impl GrabSurfaces<'_, '_> {
             .map(|point| (plane, point))
     }
 
-    /// The point `ray` points at, picked the same way as the start of a pan.
-    pub(crate) fn pick_point(
+    /// The point to zoom towards when `ray` points at it.
+    ///
+    /// Over a [`GrabSurface`], or when none exist, that is the point a pan would grab. If grab
+    /// surfaces exist but `ray` misses them all, it is the camera target, so the camera zooms
+    /// straight along its look direction.
+    pub(crate) fn zoom_point(
         &mut self,
         ray: Ray3d,
         controller: &CameraController,
         look: &LookTransform,
         min_angle: f32,
     ) -> Option<Vec3> {
-        self.drag_plane(ray, controller, look, min_angle)
-            .map(|(_, point)| point)
+        match self.hover(ray, look, min_angle)? {
+            Hover::Plane(plane) => plane.intersect(ray, controller, min_angle),
+            Hover::Miss => Some(look.target),
+        }
     }
+
+    /// What `ray` points at: the grab plane when no surfaces exist, the plane of the surface it
+    /// hits, or a miss when surfaces exist but it hits none.
+    fn hover(&mut self, ray: Ray3d, look: &LookTransform, min_angle: f32) -> Option<Hover> {
+        if !self.is_active() {
+            return Some(Hover::Plane(DragPlane::GrabHeight));
+        }
+
+        match self.cast(ray) {
+            Some(hit) => surface_plane(hit, ray, look, min_angle).map(Hover::Plane),
+            None => Some(Hover::Miss),
+        }
+    }
+}
+
+/// What a ray points at, see [`GrabSurfaces::hover`].
+enum Hover {
+    Plane(DragPlane),
+    /// Grab surfaces exist but the ray hit none of them.
+    Miss,
 }
 
 /// Normal of the plane through the target that faces the camera.

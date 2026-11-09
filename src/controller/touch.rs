@@ -72,7 +72,7 @@ fn zoom_orbit_camera(
         return;
     };
 
-    let Some(target) = surfaces.pick_point(ray, controller, camera_lt, settings.minimum_pan_angle)
+    let Some(target) = surfaces.zoom_point(ray, controller, camera_lt, settings.minimum_pan_angle)
     else {
         warn!("Cursor click did not intersect with Grab plane");
         return;

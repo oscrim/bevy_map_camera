@@ -20,6 +20,7 @@ Based upon LookTransform, LookAngles and Orbital Camera Controller from [`smooth
 - Grab surfaces
   - Add the `GrabSurface` component to meshes to pan and zoom along them instead of the XZ-plane
   - The camera target follows the surface in the centre of the view, unless the last pan started outside every surface (then it floats)
+  - Zooming over a surface zooms towards the cursor, zooming outside every surface zooms straight towards the camera target
   - `grab_height` is ignored while any `GrabSurface` exists
 - Smoothed movement
 - Customizable keyboard/mouse controls
