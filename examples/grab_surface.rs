@@ -2,16 +2,25 @@ use bevy::color::palettes::css::{DARK_GREEN, GRAY, TAN, YELLOW};
 use bevy::post_process::auto_exposure::AutoExposurePlugin;
 use bevy::prelude::*;
 
+use bevy_input::common_conditions::input_just_pressed;
 use bevy_map_camera::{
     CameraControllerSettings, GrabSurface, LookTransform, MapCamera, MapCameraPlugin,
 };
+
+const VISIBILITY_KEY: KeyCode = KeyCode::KeyZ;
 
 fn main() {
     let mut app = App::new();
     app.add_plugins((DefaultPlugins, AutoExposurePlugin, MapCameraPlugin));
 
     app.add_systems(Startup, setup);
-    app.add_systems(Update, draw_target);
+    app.add_systems(
+        Update,
+        (
+            draw_target,
+            toggle_ramp_visibility.run_if(input_just_pressed(VISIBILITY_KEY)),
+        ),
+    );
     app.run();
 }
 
@@ -42,6 +51,7 @@ fn setup(
         MeshMaterial3d(materials.add(Color::from(TAN))),
         Transform::from_xyz(4.0, 1.0, 1.8).with_rotation(Quat::from_rotation_x(0.35)),
         GrabSurface,
+        Ramp,
     ));
 
     // a pillar that is NOT a grab surface, the camera pans through it
@@ -91,6 +101,17 @@ fn setup(
                 Label,
             ),
             (
+                Text(format!(
+                    "Press {:?} to toggle ramp visibility",
+                    VISIBILITY_KEY
+                )),
+                Node {
+                    margin: UiRect::all(Val::Px(5.0)),
+                    ..default()
+                },
+                Label,
+            ),
+            (
                 Text::new("The ground, plateau and ramp are grab surfaces"),
                 Node {
                     margin: UiRect::all(Val::Px(5.0)),
@@ -109,4 +130,11 @@ fn draw_target(mut gizmos: Gizmos, camera: Single<&LookTransform, With<MapCamera
         0.15,
         YELLOW,
     );
+}
+
+#[derive(Component)]
+struct Ramp;
+
+fn toggle_ramp_visibility(ramp_visibility: Single<&mut Visibility, With<Ramp>>) {
+    ramp_visibility.into_inner().toggle_inherited_hidden();
 }

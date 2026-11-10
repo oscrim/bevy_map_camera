@@ -155,14 +155,14 @@ impl GrabSurfaces<'_, '_> {
         self.ray_cast.is_some() && !self.surfaces.is_empty()
     }
 
-    /// The nearest point where `ray` hits a [`GrabSurface`] mesh.
+    /// The nearest point where `ray` hits a visible [`GrabSurface`] mesh.
     pub(crate) fn cast(&mut self, ray: Ray3d) -> Option<Vec3> {
         let surfaces = &self.surfaces;
         let ray_cast = self.ray_cast.as_mut()?;
         let filter = |entity| surfaces.contains(entity);
         let settings = MeshRayCastSettings::default()
             .with_filter(&filter)
-            .with_visibility(RayCastVisibility::Any);
+            .with_visibility(RayCastVisibility::VisibleInView);
 
         ray_cast
             .cast_ray(ray, &settings)
